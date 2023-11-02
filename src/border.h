@@ -27,8 +27,6 @@ void borders_update_border(struct borders* borders, uint32_t wid);
 void borders_window_focus(struct borders* borders, uint32_t wid);
 void borders_move_border(struct borders* borders, uint32_t wid);
 
-uint32_t get_front_window();
-
 static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int count, CFNumberType type) {
   CFNumberRef temp[count];
 

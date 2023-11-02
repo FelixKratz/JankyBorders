@@ -25,3 +25,6 @@ void windows_init(struct windows* windows);
 void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders);
 void windows_add_window(struct windows* windows, uint32_t wid);
 bool windows_remove_window(struct windows* windows, uint32_t wid);
+
+uint32_t get_front_window();
+

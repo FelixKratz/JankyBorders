@@ -53,7 +53,6 @@ static void windows_add_border_to_current_space(struct windows* windows, struct 
   CFRelease(space_list_ref);
 }
 
-extern bool g_first_time;
 void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders) {
   uint64_t *space_list = NULL;
   int space_count = 0;

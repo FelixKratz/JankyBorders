@@ -19,7 +19,6 @@ static void event_watcher(uint32_t event, void* data, size_t data_length, void* 
   dump_event(data, data_length);
 }
 
-bool g_first_time = true;
 static void window_spawn_handler(uint32_t event, void* data, size_t data_length, void* context) {
   int cid = (intptr_t)context;
   uint32_t wid = *(uint32_t *)(data + 0x8);

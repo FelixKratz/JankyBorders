@@ -23,5 +23,18 @@ and the width of the border respectively. The color hex shall be given in the
 format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red channel,
 `B` the blue channel and `B` the blue channel.
 
+### Bootstrap with yabai
+For example, if you are using `yabai`, you could add:
+```bash
+borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0 2>/dev/null 1>&2 &
+```
+to the very end of your `yabairc`.
+
+### Bootstrap with brew
+If you want to run this as a separate service, you could also use:
+```bash
+brew services start borders
+```
+
 Any new user window, spawned after the launch of the `borders` process will
 receive a border (TODO: Add borders to all existing windows).

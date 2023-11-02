@@ -1,13 +1,27 @@
 #pragma once
 #include "extern.h"
 
+struct border {
+  bool focused;
+  bool needs_redraw;
+
+  CGRect bounds;
+  CGPoint origin;
+
+  uint32_t wid;
+  uint64_t sid;
+  uint32_t target_wid;
+
+  CGContextRef context;
+};
+
 struct borders {
   uint32_t num_borders;
   struct border* borders;
 };
 
 void borders_init(struct borders* borders);
-void borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid);
+struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid);
 void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid);
 void borders_update_border(struct borders* borders, uint32_t wid);
 void borders_window_focus(struct borders* borders, uint32_t wid);

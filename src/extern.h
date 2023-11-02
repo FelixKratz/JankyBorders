@@ -56,5 +56,7 @@ extern uint64_t SLSWindowIteratorGetAttributes(CFTypeRef iterator);
 extern int SLSWindowIteratorGetLevel(CFTypeRef iterator, int32_t index);
 
 extern CFArrayRef SLSCopyManagedDisplays(int cid);
+extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
+extern CFStringRef SLSCopyManagedDisplayForWindow(int cid, uint32_t wid);
 extern uint64_t SLSManagedDisplayGetCurrentSpace(int cid, CFStringRef uuid);
 

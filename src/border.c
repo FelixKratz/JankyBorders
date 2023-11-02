@@ -3,19 +3,6 @@
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
 extern float g_border_width;
-struct border {
-  bool focused;
-  bool needs_redraw;
-
-  CGRect bounds;
-  CGPoint origin;
-
-  uint32_t wid;
-  uint64_t sid;
-  uint32_t target_wid;
-
-  CGContextRef context;
-};
 
 static void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
@@ -191,7 +178,7 @@ void borders_init(struct borders* borders) {
   memset(borders, 0, sizeof(struct borders));
 }
 
-void borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
+struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
   struct border* border = NULL;
 
   for (int i = 0; i < borders->num_borders; i++) {
@@ -204,7 +191,7 @@ void borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
   if (!border) {
     borders->borders = realloc(borders->borders,
                                ++borders->num_borders * sizeof(struct border));
-    border = &borders->borders[borders->num_borders - 1]; 
+    border = &borders->borders[borders->num_borders - 1];
     border_init(border);
   }
 
@@ -212,6 +199,7 @@ void borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
   border->sid = sid;
   border->needs_redraw = true;
   border_draw(&borders->borders[borders->num_borders - 1]);
+  return border;
 }
 
 void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid) {

@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
   }
 
   pid_for_task(mach_task_self(), &g_pid);
+  borders_init(&g_borders);
   windows_init(&g_windows);
   events_register();
 
@@ -69,6 +70,7 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
+  windows_add_existing_windows(SLSMainConnectionID(), &g_windows, &g_borders);
   CFRunLoopRun();
 
   return 0;

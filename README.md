@@ -23,10 +23,7 @@ borders active_color=<color_hex> inactive_color=<color_hex> width=<float>
 which determine the color of the currently focused window, the inactive window 
 and the width of the border respectively. The color hex shall be given in the
 format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red channel,
-`B` the blue channel and `B` the blue channel.
-
-Any new user window, spawned after the launch of the `borders` process will
-receive a border (TODO: Add borders to all existing windows).
+`G` the green channel and `B` the blue channel.
 
 ### Bootstrap with yabai
 For example, if you are using `yabai`, you could add:

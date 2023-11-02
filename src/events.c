@@ -6,8 +6,6 @@ extern struct windows g_windows;
 extern struct borders g_borders;
 extern pid_t g_pid;
 
-bool g_first_time = true;
-
 static void dump_event(void* data, size_t data_length) {
   for (int i = 0; i < data_length; i++) {
     printf("%02x ", *((unsigned char*)data + i));
@@ -48,28 +46,13 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
       if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
         if (SLSWindowIteratorAdvance(iterator)) {
-          uint64_t tags = SLSWindowIteratorGetTags(iterator);
-          uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);
-          uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator);
-
-          if (((parent_wid == 0)
-               && ((attributes & 0x2)
-                   || (tags & 0x400000000000000))
-               && (((tags & 0x1))
-                    || ((tags & 0x2)
-                        && (tags & 0x80000000))))) {
+          ITERATOR_WINDOW_SUITABLE(iterator, {
             windows_add_window(&g_windows, wid);
+            borders_add_border(&g_borders, wid, sid);
             SLSRequestNotificationsForWindows(cid,
                                               g_windows.wids,
                                               g_windows.num_windows);
-
-            borders_add_border(&g_borders, wid, sid);
-            if (g_first_time) {
-              g_first_time = false;
-              borders_remove_border(&g_borders, wid, sid);
-              borders_add_border(&g_borders, wid, sid);
-            }
-          }
+          });
         }
       }
       if (iterator) CFRelease(iterator);

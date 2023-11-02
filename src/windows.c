@@ -1,41 +1,43 @@
 #include "windows.h"
 #include <string.h>
 
-extern bool g_first_time;
-
 void windows_init(struct windows* windows) {
   memset(windows, 0, sizeof(struct windows));
 }
 
-static uint64_t window_space_id(int cid, uint32_t wid)
-{
-    uint64_t sid = 0;
+static uint64_t window_space_id(int cid, uint32_t wid) {
+  uint64_t sid = 0;
 
-    CFArrayRef window_list_ref = cfarray_of_cfnumbers(&wid, sizeof(uint32_t), 1, kCFNumberSInt32Type);
-    CFArrayRef space_list_ref = SLSCopySpacesForWindows(cid, 0x7, window_list_ref);
-    if (!space_list_ref) goto err;
+  CFArrayRef window_list_ref = cfarray_of_cfnumbers(&wid,
+                                                    sizeof(uint32_t),
+                                                    1,
+                                                    kCFNumberSInt32Type);
 
+  CFArrayRef space_list_ref = SLSCopySpacesForWindows(cid,
+                                                      0x7,
+                                                      window_list_ref);
+
+
+  if (space_list_ref) {
     int count = CFArrayGetCount(space_list_ref);
-    if (!count) goto free;
-
-    CFNumberRef id_ref = CFArrayGetValueAtIndex(space_list_ref, 0);
-    CFNumberGetValue(id_ref, CFNumberGetType(id_ref), &sid);
-
-free:
-    CFRelease(space_list_ref);
-err:
-    CFRelease(window_list_ref);
-
-    if (sid) return sid;
-
-    CFStringRef uuid = SLSCopyManagedDisplayForWindow(cid, wid);
-    if (uuid) {
-        uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid);
-        CFRelease(uuid);
-        return sid;
+    if (count > 0) {
+      CFNumberRef id_ref = CFArrayGetValueAtIndex(space_list_ref, 0);
+      CFNumberGetValue(id_ref, CFNumberGetType(id_ref), &sid);
     }
+    CFRelease(space_list_ref);
+  }
+  CFRelease(window_list_ref);
 
-    return 0;
+  if (sid) return sid;
+
+  CFStringRef uuid = SLSCopyManagedDisplayForWindow(cid, wid);
+  if (uuid) {
+    uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid);
+    CFRelease(uuid);
+    return sid;
+  }
+
+  return 0;
 }
 
 void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders) {
@@ -70,7 +72,6 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
 
   uint64_t set_tags = 1;
   uint64_t clear_tags = 0;
-  uint32_t options = 0x2;
 
   CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
                                                    sizeof(uint64_t),
@@ -80,56 +81,42 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
   CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(cid,
                                                                 0,
                                                                 space_list_ref,
-                                                                options,
+                                                                0x2,
                                                                 &set_tags,
                                                                 &clear_tags  );
-  if (!window_list_ref) goto err;
+  if (window_list_ref) {
+    int count = CFArrayGetCount(window_list_ref);
+    if (count > 0) {
+      CFTypeRef query = SLSWindowQueryWindows(cid, window_list_ref, count);
+      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
 
-  int count = CFArrayGetCount(window_list_ref);
-  if (!count) goto out;
+      while (SLSWindowIteratorAdvance(iterator)) {
+        ITERATOR_WINDOW_SUITABLE(iterator, {
+          uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
+          uint64_t sid = window_space_id(cid, wid);
+          windows_add_window(windows, wid);
+          struct border* border = borders_add_border(borders, wid, sid);
+          CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
+                                                       sizeof(uint32_t),
+                                                       1,
+                                                       kCFNumberSInt32Type);
 
-  CFTypeRef query = SLSWindowQueryWindows(cid, window_list_ref, count);
-  CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-
-  while (SLSWindowIteratorAdvance(iterator)) {
-    uint64_t tags = SLSWindowIteratorGetTags(iterator);
-    uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);
-    uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator);
-    uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-    uint64_t sid = window_space_id(cid, wid);
-
-    if (((parent_wid == 0)
-          && ((attributes & 0x2)
-            || (tags & 0x400000000000000))
-          && (((tags & 0x1))
-            || ((tags & 0x2)
-              && (tags & 0x80000000))))) {
-      windows_add_window(windows, wid);
-      SLSRequestNotificationsForWindows(cid,
-          windows->wids,
-          windows->num_windows);
-      struct border* border = borders_add_border(borders, wid, sid);
-      if (g_first_time) {
-        g_first_time = false;
-        borders_remove_border(borders, wid, sid);
-        border = borders_add_border(borders, wid, sid);
+          border->sid = sid;
+          SLSMoveWindowsToManagedSpace(cid, border_ref, sid);
+          CFRelease(border_ref);
+        });
       }
-      CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
-                                                   sizeof(uint32_t),
-                                                   1,
-                                                   kCFNumberSInt32Type);
 
-      border->sid = sid;
-      SLSMoveWindowsToManagedSpace(cid, border_ref, sid);
-      CFRelease(border_ref);
+      SLSRequestNotificationsForWindows(cid,
+                                        windows->wids,
+                                        windows->num_windows);
+
+
+      CFRelease(query);
+      CFRelease(iterator);
     }
+    CFRelease(window_list_ref);
   }
-
-  CFRelease(query);
-  CFRelease(iterator);
-out:
-  CFRelease(window_list_ref);
-err:
   CFRelease(space_list_ref);
   free(space_list);
 }

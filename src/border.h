@@ -11,6 +11,7 @@ void borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid);
 void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid);
 void borders_update_border(struct borders* borders, uint32_t wid);
 void borders_window_focus(struct borders* borders, uint32_t wid);
+void borders_move_border(struct borders* borders, uint32_t wid);
 
 uint32_t get_front_window();
 

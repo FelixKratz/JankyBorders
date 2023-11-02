@@ -27,6 +27,21 @@ static void border_destroy(struct border* border) {
   border_init(border);
 }
 
+static void border_move(struct border* border) {
+  int cid = SLSMainConnectionID();
+  CFTypeRef transaction = SLSTransactionCreate(cid);
+
+  CGRect window_frame;
+  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  CGRect frame = CGRectInset(window_frame, -g_border_width, -g_border_width);
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, frame.origin);
+
+  SLSTransactionCommit(transaction, true);
+  border->origin = window_frame.origin;
+
+  CFRelease(transaction);
+}
+
 static void border_draw(struct border* border) {
   int cid = SLSMainConnectionID();
 
@@ -64,11 +79,11 @@ static void border_draw(struct border* border) {
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
 
-  CFTypeRef frame_region;
-  CGSNewRegionWithRect(&frame, &frame_region);
-
   SLSDisableUpdate(cid);
   if (!border->wid) {
+    CFTypeRef frame_region;
+    CGSNewRegionWithRect(&frame, &frame_region);
+
     uint64_t set_tags = 1ULL <<  1;
     uint64_t clear_tags = 0;
 
@@ -92,13 +107,39 @@ static void border_draw(struct border* border) {
     border->bounds = frame;
     border->origin = origin;
     border->needs_redraw = true;
+    CFRelease(frame_region);
+
+    if (!border->sid) {
+      CFArrayRef spaces = SLSCopySpacesForWindows(cid, 0x2, target_ref);
+      if (CFArrayGetCount(spaces) > 0) {
+        CFNumberRef number = CFArrayGetValueAtIndex(spaces, 0);
+        uint64_t sid;
+        CFNumberGetValue(number, CFNumberGetType(number), &sid);
+        border->sid = sid;
+        CFRelease(number);
+      }
+      CFRelease(spaces);
+    }
+    CFRelease(target_ref);
+
+    CFArrayRef window_list = cfarray_of_cfnumbers(&border->wid,
+                                                  sizeof(uint32_t),
+                                                  1,
+                                                  kCFNumberSInt32Type);
+
+    SLSMoveWindowsToManagedSpace(cid, window_list, border->sid);
+    CFRelease(window_list);
   }
 
   CFTypeRef transaction = SLSTransactionCreate(cid);
   if (!CGRectEqualToRect(frame, border->bounds)) {
+    CFTypeRef frame_region;
+    CGSNewRegionWithRect(&frame, &frame_region);
+
     border->bounds = frame;
     SLSSetWindowShape(cid, border->wid, -9999, -9999, frame_region);
     border->needs_redraw = true;
+    CFRelease(frame_region);
   }
 
   SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
@@ -107,28 +148,6 @@ static void border_draw(struct border* border) {
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
 
   SLSOrderWindow(cid, border->wid, -1, border->target_wid);
-  CFRelease(frame_region);
-
-  if (!border->sid) {
-    CFArrayRef spaces = SLSCopySpacesForWindows(cid, 0x2, target_ref);
-    if (CFArrayGetCount(spaces) > 0) {
-      CFNumberRef number = CFArrayGetValueAtIndex(spaces, 0);
-      uint64_t sid;
-      CFNumberGetValue(number, CFNumberGetType(number), &sid);
-      border->sid = sid;
-      CFRelease(number);
-    }
-    CFRelease(spaces);
-  }
-  CFRelease(target_ref);
-
-  CFArrayRef window_list = cfarray_of_cfnumbers(&border->wid,
-                                                sizeof(uint32_t),
-                                                1,
-                                                kCFNumberSInt32Type);
-
-  SLSMoveWindowsToManagedSpace(cid, window_list, border->sid);
-  CFRelease(window_list);
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
@@ -226,6 +245,14 @@ void borders_window_focus(struct borders* borders, uint32_t wid) {
         borders->borders[i].needs_redraw = true;
         border_draw(&borders->borders[i]);
       }
+    }
+  }
+}
+
+void borders_move_border(struct borders* borders, uint32_t wid) {
+  for (int i = 0; i < borders->num_borders; i++) {
+    if (borders->borders[i].target_wid == wid) {
+      border_move(&borders->borders[i]);
     }
   }
 }

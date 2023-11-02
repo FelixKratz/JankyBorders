@@ -95,7 +95,7 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
 
   if (event == EVENT_WINDOW_MOVE) {
     printf("Window Move: %d\n", wid);
-    borders_update_border(&g_borders, wid);
+    borders_move_border(&g_borders, wid);
   } else if (event == EVENT_WINDOW_RESIZE) {
     borders_update_border(&g_borders, wid);
   } else if (event == EVENT_WINDOW_REORDER) {

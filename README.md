@@ -10,7 +10,9 @@ Current status: Early development.
 Compile the source code to a binary using `make` in the cloned repository or
 install the binary via brew:
 ```bash
-brew install FelixKratz/formulae/borders
+brew tap FelixKratz/formulae
+brew update
+brew install borders
 ```
 
 The binary can be started via `borders` and takes either no arguments or

@@ -47,7 +47,6 @@ int main(int argc, char** argv) {
   borders_init(&g_borders);
   windows_init(&g_windows);
   events_register();
-  windows_add_existing_windows(SLSMainConnectionID(), &g_windows, &g_borders);
 
   SLSWindowManagementBridgeSetDelegate(NULL);
   mach_port_t port;
@@ -71,6 +70,7 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
+  windows_add_existing_windows(SLSMainConnectionID(), &g_windows, &g_borders);
   CFRunLoopRun();
 
   return 0;

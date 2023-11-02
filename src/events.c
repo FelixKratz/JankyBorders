@@ -136,7 +136,7 @@ void events_register() {
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_CREATE, cid_ctx);
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_DESTROY, cid_ctx);
   
-  for (int i = 0; i < 2000; i++) {
-    SLSRegisterNotifyProc(event_watcher, i, NULL);
-  }
+  // for (int i = 0; i < 2000; i++) {
+  //   SLSRegisterNotifyProc(event_watcher, i, NULL);
+  // }
 }

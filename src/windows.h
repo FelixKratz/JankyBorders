@@ -20,5 +20,5 @@
 void windows_add_existing_windows(int cid, struct table* windows);
 uint64_t window_space_id(int cid, uint32_t wid);
 struct border* windows_add_window(struct table* windows, uint32_t wid, uint64_t sid);
-bool windows_remove_window(struct table* windows, uint32_t wid);
+bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid);
 void update_window_notifications(void);

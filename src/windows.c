@@ -141,9 +141,9 @@ struct border* windows_add_window(struct table* windows, uint32_t wid, uint64_t 
     return border;
 }
 
-bool windows_remove_window(struct table* windows, uint32_t wid) {
+bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid) {
   struct border *border = table_find(windows, &wid);
-  if (border) {
+  if (border && border->sid == sid) {
     table_remove(windows, &wid);
     border_destroy(border);
     return true;

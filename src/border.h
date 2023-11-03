@@ -16,7 +16,7 @@ struct border {
   CGContextRef context;
 };
 
-void borders_remove_border(uint32_t wid, uint64_t sid);
+void borders_remove_border(uint32_t wid);
 void borders_update_border(uint32_t wid);
 void borders_window_focus(uint32_t wid);
 void borders_move_border(uint32_t wid);

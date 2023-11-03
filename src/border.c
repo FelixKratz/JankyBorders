@@ -1,17 +1,19 @@
 #include "border.h"
+#include "hashtable.h"
 
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
 extern float g_border_width;
+extern struct table g_windows;
 
 static void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
 }
 
-static void border_destroy(struct border* border) {
+void border_destroy(struct border* border) {
   SLSReleaseWindow(SLSMainConnectionID(), border->wid);
   if (border->context) CGContextRelease(border->context);
-  border_init(border);
+  free(border);
 }
 
 static void border_move(struct border* border) {
@@ -174,74 +176,66 @@ static void border_draw(struct border* border) {
   SLSReenableUpdate(cid);
 }
 
-void borders_init(struct borders* borders) {
-  memset(borders, 0, sizeof(struct borders));
-}
-
-struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
-  struct border* border = NULL;
-
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid
-        && (borders->borders[i].sid == sid || sid == 0)) {
-      border = &borders->borders[i];
-    }
-  }
-
+struct border* border_create(uint32_t wid, uint64_t sid) {
+  struct border* border = table_find(&g_windows, &wid);
   if (!border) {
-    borders->borders = realloc(borders->borders,
-                               ++borders->num_borders * sizeof(struct border));
-    border = &borders->borders[borders->num_borders - 1];
+    border = malloc(sizeof(struct border));
     border_init(border);
+    table_add(&g_windows, &wid, border);
   }
 
   border->target_wid = wid;
   border->sid = sid;
   border->needs_redraw = true;
-  border_draw(&borders->borders[borders->num_borders - 1]);
+  border_draw(border);
   return border;
 }
 
-void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid
-        && (borders->borders[i].sid == sid || sid == 0)) {
-      border_destroy(&borders->borders[i]);
-    }
+void borders_remove_border(uint32_t wid, uint64_t sid) {
+  struct border* border = table_find(&g_windows, &wid);
+  if (border) {
+    table_remove(&g_windows, &wid);
+    border_destroy(border);
   }
 }
 
-void borders_update_border(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid) {
-      border_draw(&borders->borders[i]);
-    }
+void borders_update_border(uint32_t wid) {
+  struct border* border = table_find(&g_windows, &wid);
+  if (border) {
+    border_draw(border);
   }
 }
 
-void borders_window_focus(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].focused && borders->borders[i].target_wid != wid) {
-      borders->borders[i].focused = false;
-      borders->borders[i].needs_redraw = true;
-      border_draw(&borders->borders[i]);
-    }
+void borders_window_focus(uint32_t wid) {
+  for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
+    struct bucket *bucket = g_windows.buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+          struct border* border = bucket->value;
+          if (border->focused && border->target_wid != wid) {
+            border->focused = false;
+            border->needs_redraw = true;
+            border_draw(border);
+          }
 
-    if (borders->borders[i].target_wid == wid) {
-      if (!borders->borders[i].focused) {
-        borders->borders[i].focused = true;
-        borders->borders[i].needs_redraw = true;
-        border_draw(&borders->borders[i]);
+          if (border->target_wid == wid) {
+            if (!border->focused) {
+              border->focused = true;
+              border->needs_redraw = true;
+              border_draw(border);
+            }
+          }
       }
+
+      bucket = bucket->next;
     }
   }
 }
 
-void borders_move_border(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid) {
-      border_move(&borders->borders[i]);
-    }
+void borders_move_border(uint32_t wid) {
+  struct border* border = table_find(&g_windows, &wid);
+  if (border) {
+    border_move(border);
   }
 }
 

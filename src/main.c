@@ -1,13 +1,23 @@
+#include "hashtable.h"
 #include "events.h"
 #include "windows.h"
 #include <stdio.h>
 
-struct windows g_windows;
-struct borders g_borders;
 pid_t g_pid;
 uint32_t g_active_window_color = 0xffe1e3e4;
 uint32_t g_inactive_window_color = 0xff494d64;
 float g_border_width = 4.f;
+struct table g_windows;
+
+static TABLE_HASH_FUNC(hash_windows)
+{
+    return *(uint32_t *) key;
+}
+
+static TABLE_COMPARE_FUNC(cmp_windows)
+{
+    return *(uint32_t *) key_a == *(uint32_t *) key_b;
+}
 
 void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
   int cid = SLSMainConnectionID();
@@ -44,8 +54,7 @@ int main(int argc, char** argv) {
   }
 
   pid_for_task(mach_task_self(), &g_pid);
-  borders_init(&g_borders);
-  windows_init(&g_windows);
+  table_init(&g_windows, 1024, hash_windows, cmp_windows);
   events_register();
 
   SLSWindowManagementBridgeSetDelegate(NULL);
@@ -70,7 +79,7 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
-  windows_add_existing_windows(SLSMainConnectionID(), &g_windows, &g_borders);
+  windows_add_existing_windows(SLSMainConnectionID(), &g_windows);
   CFRunLoopRun();
 
   return 0;

@@ -1,5 +1,6 @@
 #pragma once
 #include "extern.h"
+#include "hashtable.h"
 
 struct border {
   bool focused;
@@ -15,17 +16,12 @@ struct border {
   CGContextRef context;
 };
 
-struct borders {
-  uint32_t num_borders;
-  struct border* borders;
-};
-
-void borders_init(struct borders* borders);
-struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid);
-void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid);
-void borders_update_border(struct borders* borders, uint32_t wid);
-void borders_window_focus(struct borders* borders, uint32_t wid);
-void borders_move_border(struct borders* borders, uint32_t wid);
+void borders_remove_border(uint32_t wid, uint64_t sid);
+void borders_update_border(uint32_t wid);
+void borders_window_focus(uint32_t wid);
+void borders_move_border(uint32_t wid);
+struct border* border_create(uint32_t wid, uint64_t sid);
+void border_destroy(struct border* border);
 
 uint32_t get_front_window();
 

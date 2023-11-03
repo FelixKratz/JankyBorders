@@ -1,11 +1,30 @@
 #include "windows.h"
+#include "hashtable.h"
 #include <string.h>
 
-void windows_init(struct windows* windows) {
-  memset(windows, 0, sizeof(struct windows));
+extern struct table g_windows;
+
+void update_window_notifications(void)
+{
+    int window_count = 0;
+    uint32_t window_list[1024] = {};
+
+    for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
+        struct bucket *bucket = g_windows.buckets[window_index];
+        while (bucket) {
+            if (bucket->value) {
+                uint32_t wid = *(uint32_t *) bucket->key;
+                window_list[window_count++] = wid;
+            }
+
+            bucket = bucket->next;
+        }
+    }
+
+    SLSRequestNotificationsForWindows(SLSMainConnectionID(), window_list, window_count);
 }
 
-static uint64_t window_space_id(int cid, uint32_t wid) {
+uint64_t window_space_id(int cid, uint32_t wid) {
   uint64_t sid = 0;
 
   CFArrayRef window_list_ref = cfarray_of_cfnumbers(&wid,
@@ -40,7 +59,7 @@ static uint64_t window_space_id(int cid, uint32_t wid) {
   return 0;
 }
 
-void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders) {
+void windows_add_existing_windows(int cid, struct table* windows) {
   uint64_t *space_list = NULL;
   int space_count = 0;
 
@@ -81,7 +100,7 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
   CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(cid,
                                                                 0,
                                                                 space_list_ref,
-                                                                0x7,
+                                                                0x2,
                                                                 &set_tags,
                                                                 &clear_tags  );
   if (window_list_ref) {
@@ -94,8 +113,7 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
           uint64_t sid = window_space_id(cid, wid);
-          windows_add_window(windows, wid);
-          struct border* border = borders_add_border(borders, wid, sid);
+          struct border* border = windows_add_window(windows, wid, sid);
           CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
                                                        sizeof(uint32_t),
                                                        1,
@@ -107,11 +125,7 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
         });
       }
 
-      SLSRequestNotificationsForWindows(cid,
-                                        windows->wids,
-                                        windows->num_windows);
-
-
+      update_window_notifications();
       CFRelease(query);
       CFRelease(iterator);
     }
@@ -121,25 +135,18 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
   free(space_list);
 }
 
-void windows_add_window(struct windows* windows, uint32_t wid) {
-  for (int i = 0; i < windows->num_windows; i++) {
-    if (!windows->wids[i]) {
-      windows->wids[i] = wid;
-      return;
-    };
-  }
-
-  windows->wids = (uint32_t*)realloc(windows->wids,
-                                     sizeof(uint32_t)*++windows->num_windows);
-  windows->wids[windows->num_windows - 1] = wid;
+struct border* windows_add_window(struct table* windows, uint32_t wid, uint64_t sid) {
+    struct border *border = border_create(wid, sid);
+    table_add(windows, &wid, border);
+    return border;
 }
 
-bool windows_remove_window(struct windows* windows, uint32_t wid) {
-  for (int i = 0; i < windows->num_windows; i++) {
-    if (windows->wids[i] == wid) {
-      windows->wids[i] = 0;
-      return true;
-    }
+bool windows_remove_window(struct table* windows, uint32_t wid) {
+  struct border *border = table_find(windows, &wid);
+  if (border) {
+    table_remove(windows, &wid);
+    border_destroy(border);
+    return true;
   }
   return false;
 }

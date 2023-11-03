@@ -1,20 +1,22 @@
 #include "border.h"
+#include "hashtable.h"
+#include "windows.h"
 
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
 extern float g_border_width;
 
-static void border_init(struct border* border) {
+void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
 }
 
-static void border_destroy(struct border* border) {
+void border_destroy(struct border* border) {
   SLSReleaseWindow(SLSMainConnectionID(), border->wid);
   if (border->context) CGContextRelease(border->context);
-  border_init(border);
+  free(border);
 }
 
-static void border_move(struct border* border) {
+void border_move(struct border* border) {
   int cid = SLSMainConnectionID();
   CFTypeRef transaction = SLSTransactionCreate(cid);
 
@@ -29,8 +31,9 @@ static void border_move(struct border* border) {
   CFRelease(transaction);
 }
 
-static void border_draw(struct border* border) {
+void border_draw(struct border* border) {
   int cid = SLSMainConnectionID();
+  if (!is_space_visible(cid, border->sid)) return;
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
@@ -59,6 +62,7 @@ static void border_draw(struct border* border) {
   int level = SLSWindowIteratorGetLevel(iterator, 0);
   CFRelease(iterator);
   CFRelease(query);
+  CFRelease(target_ref);
 
   int sub_level = 0;
   SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
@@ -71,7 +75,7 @@ static void border_draw(struct border* border) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
 
-    uint64_t set_tags = 1ULL << 1;
+    uint64_t set_tags = 1ULL <<  1;
     uint64_t clear_tags = 0;
 
     uint64_t id;
@@ -97,17 +101,8 @@ static void border_draw(struct border* border) {
     CFRelease(frame_region);
 
     if (!border->sid) {
-      CFArrayRef spaces = SLSCopySpacesForWindows(cid, 0x2, target_ref);
-      if (CFArrayGetCount(spaces) > 0) {
-        CFNumberRef number = CFArrayGetValueAtIndex(spaces, 0);
-        uint64_t sid;
-        CFNumberGetValue(number, CFNumberGetType(number), &sid);
-        border->sid = sid;
-        CFRelease(number);
-      }
-      CFRelease(spaces);
+      border->sid = window_space_id(cid, border->target_wid);
     }
-    CFRelease(target_ref);
 
     CFArrayRef window_list = cfarray_of_cfnumbers(&border->wid,
                                                   sizeof(uint32_t),
@@ -130,7 +125,6 @@ static void border_draw(struct border* border) {
 
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
-
   SLSOrderWindow(cid, border->wid, -1, border->target_wid);
 
   if (border->needs_redraw) {
@@ -166,77 +160,21 @@ static void border_draw(struct border* border) {
     CFRelease(path);
   }
 
-  border_move(border);
+  CFTypeRef transaction = SLSTransactionCreate(cid);
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
+  SLSTransactionCommit(transaction, true);
+  CFRelease(transaction);
   SLSReenableUpdate(cid);
 }
 
-void borders_init(struct borders* borders) {
-  memset(borders, 0, sizeof(struct borders));
+void border_hide(struct border* border) {
+  if (border->wid) {
+    int cid = SLSMainConnectionID();
+    SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+  }
 }
 
-struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_t sid) {
-  struct border* border = NULL;
-
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid
-        && (borders->borders[i].sid == sid || sid == 0)) {
-      border = &borders->borders[i];
-    }
-  }
-
-  if (!border) {
-    borders->borders = realloc(borders->borders,
-                               ++borders->num_borders * sizeof(struct border));
-    border = &borders->borders[borders->num_borders - 1];
-    border_init(border);
-  }
-
-  border->target_wid = wid;
-  border->sid = sid;
-  border->needs_redraw = true;
+void border_unhide(struct border* border) {
   border_draw(border);
-  return border;
 }
 
-void borders_remove_border(struct borders* borders, uint32_t wid, uint64_t sid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid
-        && (borders->borders[i].sid == sid || sid == 0)) {
-      border_destroy(&borders->borders[i]);
-    }
-  }
-}
-
-void borders_update_border(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid) {
-      border_draw(&borders->borders[i]);
-    }
-  }
-}
-
-void borders_window_focus(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].focused && borders->borders[i].target_wid != wid) {
-      borders->borders[i].focused = false;
-      borders->borders[i].needs_redraw = true;
-      border_draw(&borders->borders[i]);
-    }
-
-    if (borders->borders[i].target_wid == wid) {
-      if (!borders->borders[i].focused) {
-        borders->borders[i].focused = true;
-        borders->borders[i].needs_redraw = true;
-        border_draw(&borders->borders[i]);
-      }
-    }
-  }
-}
-
-void borders_move_border(struct borders* borders, uint32_t wid) {
-  for (int i = 0; i < borders->num_borders; i++) {
-    if (borders->borders[i].target_wid == wid) {
-      border_move(&borders->borders[i]);
-    }
-  }
-}

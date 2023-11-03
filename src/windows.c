@@ -1,11 +1,98 @@
 #include "windows.h"
+#include "hashtable.h"
 #include <string.h>
+#include "border.h"
 
-void windows_init(struct windows* windows) {
-  memset(windows, 0, sizeof(struct windows));
+void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
+  struct border* border = table_find(windows, &wid);
+  if (!border) {
+    border = malloc(sizeof(struct border));
+    border_init(border);
+    table_add(windows, &wid, border);
+  }
+
+  border->target_wid = wid;
+  border->sid = sid;
+  border->needs_redraw = true;
+  border_draw(border);
 }
 
-static void windows_add_border_to_current_space(struct windows* windows, struct borders* borders) {
+void windows_window_update(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_draw(border);
+}
+
+void windows_window_focus(struct table* windows, uint32_t wid) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border->focused && border->target_wid != wid) {
+          border->focused = false;
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+
+        if (!border->focused && border->target_wid == wid) {
+          border->focused = true;
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+      }
+
+      bucket = bucket->next;
+    }
+  }
+}
+
+void windows_window_move(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_move(border);
+}
+
+void windows_window_hide(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_hide(border);
+}
+
+void windows_window_unhide(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_unhide(border);
+}
+
+bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
+  struct border* border = table_find(windows, &wid);
+  if (border && border->sid == sid) {
+    table_remove(windows, &wid);
+    border_destroy(border);
+    return true;
+  }
+  return false;
+}
+
+void windows_update_notifications(struct table* windows) {
+  int window_count = 0;
+  uint32_t window_list[1024] = {};
+
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket *bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        uint32_t wid = *(uint32_t *) bucket->key;
+        window_list[window_count++] = wid;
+      }
+
+      bucket = bucket->next;
+    }
+  }
+
+  SLSRequestNotificationsForWindows(SLSMainConnectionID(),
+                                    window_list,
+                                    window_count          );
+}
+
+void windows_draw_borders_on_current_spaces(struct table* windows) {
   int cid = SLSMainConnectionID();
   CFArrayRef displays = SLSCopyManagedDisplays(cid);
   uint32_t space_count = CFArrayGetCount(displays);
@@ -41,7 +128,8 @@ static void windows_add_border_to_current_space(struct windows* windows, struct 
         while(SLSWindowIteratorAdvance(iterator)) {
           ITERATOR_WINDOW_SUITABLE(iterator, {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-            borders_add_border(borders, wid, 0);
+            struct border* border = table_find(windows, &wid);
+            if (border) border_draw(border);
           });
         }
       }
@@ -53,8 +141,9 @@ static void windows_add_border_to_current_space(struct windows* windows, struct 
   CFRelease(space_list_ref);
 }
 
-void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders) {
-  uint64_t *space_list = NULL;
+void windows_add_existing_windows(struct table* windows) {
+  int cid = SLSMainConnectionID();
+  uint64_t* space_list = NULL;
   int space_count = 0;
 
   CFArrayRef display_spaces_ref = SLSCopyManagedDisplaySpaces(cid);
@@ -106,95 +195,16 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
       while (SLSWindowIteratorAdvance(iterator)) {
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-          windows_add_window(windows, wid);
+          windows_window_create(windows, wid, window_space_id(cid, wid));
         });
       }
 
-      SLSRequestNotificationsForWindows(cid,
-                                        windows->wids,
-                                        windows->num_windows);
-
+      windows_update_notifications(windows);
       CFRelease(query);
       CFRelease(iterator);
     }
     CFRelease(window_list_ref);
   }
-
   CFRelease(space_list_ref);
   free(space_list);
-  windows_add_border_to_current_space(windows, borders);
-}
-
-void windows_add_window(struct windows* windows, uint32_t wid) {
-  for (int i = 0; i < windows->num_windows; i++) {
-    if (!windows->wids[i]) {
-      windows->wids[i] = wid;
-      return;
-    };
-  }
-
-  windows->wids = (uint32_t*)realloc(windows->wids,
-                                     sizeof(uint32_t)*++windows->num_windows);
-  windows->wids[windows->num_windows - 1] = wid;
-}
-
-bool windows_remove_window(struct windows* windows, uint32_t wid) {
-  for (int i = 0; i < windows->num_windows; i++) {
-    if (windows->wids[i] == wid) {
-      windows->wids[i] = 0;
-      return true;
-    }
-  }
-  return false;
-}
-
-uint32_t get_front_window() {
-  int cid = SLSMainConnectionID();
-  ProcessSerialNumber psn;
-  _SLPSGetFrontProcess(&psn);
-  int target_cid;
-  SLSGetConnectionIDForPSN(cid, &psn, &target_cid);
-
-  CFArrayRef displays = SLSCopyManagedDisplays(cid);
-  uint32_t space_count = CFArrayGetCount(displays);
-  uint64_t space_list[space_count];
-
-  for (int i = 0; i < space_count; i++) {
-    space_list[i] = SLSManagedDisplayGetCurrentSpace(cid,
-                                          CFArrayGetValueAtIndex(displays, i));
-  }
-
-  CFRelease(displays);
-
-  CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
-                                                   sizeof(uint64_t),
-                                                   space_count,
-                                                   kCFNumberSInt64Type);
-
-  uint64_t set_tags = 1;
-  uint64_t clear_tags = 0;
-  CFArrayRef window_list = SLSCopyWindowsWithOptionsAndTags(cid,
-                                                            target_cid,
-                                                            space_list_ref,
-                                                            0x2,
-                                                            &set_tags,
-                                                            &clear_tags    );
-
-  uint32_t wid = 0;
-  if (window_list) {
-    uint32_t window_count = CFArrayGetCount(window_list);
-    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
-    if (query) {
-      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-      if (iterator) {
-        wid = SLSWindowIteratorGetWindowID(iterator);
-        CFRelease(iterator);
-      }
-      CFRelease(query);
-    }
-    CFRelease(window_list);
-  }
-
-  CFRelease(space_list_ref);
-  return wid;
 }

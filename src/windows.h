@@ -1,6 +1,7 @@
 #pragma once
 #include <stdlib.h>
 #include "border.h"
+#include "hashtable.h"
 
 #define ITERATOR_WINDOW_SUITABLE(iterator, code) { \
   uint64_t tags = SLSWindowIteratorGetTags(iterator); \
@@ -16,15 +17,13 @@
   } \
 }
 
-struct windows {
-  uint32_t num_windows;
-  uint32_t* wids;
-};
-
-void windows_init(struct windows* windows);
-void windows_add_existing_windows(int cid, struct windows* windows, struct borders* borders);
-void windows_add_window(struct windows* windows, uint32_t wid);
-bool windows_remove_window(struct windows* windows, uint32_t wid);
-
-uint32_t get_front_window();
-
+void windows_window_update(struct table* windows, uint32_t wid);
+void windows_window_focus(struct table* windows, uint32_t wid);
+void windows_window_hide(struct table* windows, uint32_t wid);
+void windows_window_unhide(struct table* windows, uint32_t wid);
+void windows_window_move(struct table* windows, uint32_t wid);
+void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid);
+bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid);
+void windows_add_existing_windows(struct table* windows);
+void windows_update_notifications(struct table* windows);
+void windows_draw_borders_on_current_spaces(struct table* windows);

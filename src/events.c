@@ -2,8 +2,7 @@
 #include "windows.h"
 #include "border.h"
 
-extern struct windows g_windows;
-extern struct borders g_borders;
+extern struct table g_windows;
 extern pid_t g_pid;
 
 static void dump_event(void* data, size_t data_length) {
@@ -20,6 +19,7 @@ static void event_watcher(uint32_t event, void* data, size_t data_length, void* 
 }
 
 static void window_spawn_handler(uint32_t event, void* data, size_t data_length, void* context) {
+  struct table* windows = &g_windows;
   int cid = (intptr_t)context;
   uint32_t wid = *(uint32_t *)(data + 0x8);
   uint64_t sid = *(uint64_t *)data;
@@ -47,11 +47,8 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
       if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
         if (SLSWindowIteratorAdvance(iterator)) {
           ITERATOR_WINDOW_SUITABLE(iterator, {
-            windows_add_window(&g_windows, wid);
-            borders_add_border(&g_borders, wid, sid);
-            SLSRequestNotificationsForWindows(cid,
-                                              g_windows.wids,
-                                              g_windows.num_windows);
+            windows_window_create(windows, wid, sid);
+            windows_update_notifications(windows);
           });
         }
       }
@@ -61,47 +58,50 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
     CFRelease(target_ref);
   } else if (event == EVENT_WINDOW_DESTROY) {
     printf("Window Destroyed: %d\n", wid);
-    if (windows_remove_window(&g_windows, wid)) {
-      SLSRequestNotificationsForWindows(cid,
-                                        g_windows.wids,
-                                        g_windows.num_windows);
+    if (windows_window_destroy(windows, wid, sid)) {
+      windows_update_notifications(windows);
     }
 
-    borders_remove_border(&g_borders, wid, sid);
-    borders_window_focus(&g_borders, get_front_window());
+    windows_window_focus(windows, get_front_window());
   }
 }
 
 static void window_modify_handler(uint32_t event, void* data, size_t data_length, void* context) {
   int cid = (intptr_t)context;
   uint32_t wid = *(uint32_t *)(data);
+  struct table* windows = &g_windows;
 
   if (event == EVENT_WINDOW_MOVE) {
     printf("Window Move: %d\n", wid);
-    borders_move_border(&g_borders, wid);
+    windows_window_move(windows, wid);
   } else if (event == EVENT_WINDOW_RESIZE) {
-    borders_update_border(&g_borders, wid);
+    windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_REORDER) {
     printf("Window Reorder: %d\n", wid);
 
     // The update of the front window might not have taken place yet...
     usleep(10000);
 
-    borders_window_focus(&g_borders, get_front_window());
+    windows_window_focus(windows, get_front_window());
+    windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_LEVEL) {
     printf("Window Level: %d\n", wid);
-    borders_update_border(&g_borders, wid);
+    windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
     wid = get_front_window();
     printf("Window Focus: %d\n", wid);
-    borders_window_focus(&g_borders, wid);
+    windows_window_focus(windows, wid);
   } else if (event == EVENT_WINDOW_UNHIDE) {
     printf("Window Unhide: %d\n", wid);
-    borders_add_border(&g_borders, wid, 0);
+    windows_window_unhide(windows, wid);
   } else if (event == EVENT_WINDOW_HIDE) {
     printf("Window Hide: %d\n", wid);
-    borders_remove_border(&g_borders, wid, 0);
+    windows_window_hide(windows, wid);
   }
+}
+
+static void space_handler(uint32_t event, void* data, size_t data_length, void* context) {
+  windows_draw_borders_on_current_spaces(&g_windows);
 }
 
 void events_register() {
@@ -118,7 +118,9 @@ void events_register() {
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_UPDATE, cid_ctx);
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_CREATE, cid_ctx);
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_DESTROY, cid_ctx);
-  
+
+  SLSRegisterNotifyProc(space_handler, EVENT_SPACE_CHANGE, cid_ctx);
+
   // for (int i = 0; i < 2000; i++) {
   //   SLSRegisterNotifyProc(event_watcher, i, NULL);
   // }

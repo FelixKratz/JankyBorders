@@ -112,7 +112,6 @@ void border_draw(struct border* border) {
     CFRelease(window_list);
   }
 
-  CFTypeRef transaction = SLSTransactionCreate(cid);
   if (!CGRectEqualToRect(frame, border->bounds)) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
@@ -123,11 +122,8 @@ void border_draw(struct border* border) {
     CFRelease(frame_region);
   }
 
-  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
-
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
-
   SLSOrderWindow(cid, border->wid, -1, border->target_wid);
 
   if (border->needs_redraw) {
@@ -163,18 +159,25 @@ void border_draw(struct border* border) {
     CFRelease(path);
   }
 
+  CFTypeRef transaction = SLSTransactionCreate(cid);
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
   SLSTransactionCommit(transaction, true);
   CFRelease(transaction);
   SLSReenableUpdate(cid);
 }
 
 void border_hide(struct border* border) {
-  int cid = SLSMainConnectionID();
-  SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+  if (border->wid) {
+    int cid = SLSMainConnectionID();
+    SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+  }
 }
 
 void border_unhide(struct border* border) {
-  int cid = SLSMainConnectionID();
-  SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+  if (!border->wid) border_draw(border);
+  else {
+    int cid = SLSMainConnectionID();
+    SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+  }
 }
 

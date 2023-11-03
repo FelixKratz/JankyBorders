@@ -146,7 +146,7 @@ void windows_add_existing_windows(struct table* windows) {
       while (SLSWindowIteratorAdvance(iterator)) {
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-          windows_window_create(windows, wid, 0);
+          windows_window_create(windows, wid, window_space_id(cid, wid));
         });
       }
 

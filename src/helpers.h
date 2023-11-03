@@ -68,6 +68,22 @@ static inline uint32_t get_front_window() {
   return wid;
 }
 
+static inline bool is_space_visible(int cid, uint64_t sid) {
+  CFArrayRef displays = SLSCopyManagedDisplays(cid);
+  uint32_t space_count = CFArrayGetCount(displays);
+
+  for (int i = 0; i < space_count; i++) {
+    if (sid == SLSManagedDisplayGetCurrentSpace(cid,
+                           (CFStringRef)CFArrayGetValueAtIndex(displays, i))) {
+      CFRelease(displays);
+      return true;
+    }
+  }
+
+  CFRelease(displays);
+  return false;
+}
+
 static inline uint64_t window_space_id(int cid, uint32_t wid) {
   uint64_t sid = 0;
 

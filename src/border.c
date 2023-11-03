@@ -71,7 +71,7 @@ static void border_draw(struct border* border) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
 
-    uint64_t set_tags = 1ULL << 1;
+    uint64_t set_tags = 1ULL <<  1;
     uint64_t clear_tags = 0;
 
     uint64_t id;
@@ -118,6 +118,7 @@ static void border_draw(struct border* border) {
     CFRelease(window_list);
   }
 
+  CFTypeRef transaction = SLSTransactionCreate(cid);
   if (!CGRectEqualToRect(frame, border->bounds)) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
@@ -127,6 +128,8 @@ static void border_draw(struct border* border) {
     border->needs_redraw = true;
     CFRelease(frame_region);
   }
+
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
 
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
@@ -166,7 +169,8 @@ static void border_draw(struct border* border) {
     CFRelease(path);
   }
 
-  border_move(border);
+  SLSTransactionCommit(transaction, true);
+  CFRelease(transaction);
   SLSReenableUpdate(cid);
 }
 
@@ -194,7 +198,7 @@ struct border* borders_add_border(struct borders* borders, uint32_t wid, uint64_
   border->target_wid = wid;
   border->sid = sid;
   border->needs_redraw = true;
-  border_draw(border);
+  border_draw(&borders->borders[borders->num_borders - 1]);
   return border;
 }
 
@@ -239,4 +243,55 @@ void borders_move_border(struct borders* borders, uint32_t wid) {
       border_move(&borders->borders[i]);
     }
   }
+}
+
+uint32_t get_front_window() {
+  int cid = SLSMainConnectionID();
+  ProcessSerialNumber psn;
+  _SLPSGetFrontProcess(&psn);
+  int target_cid;
+  SLSGetConnectionIDForPSN(cid, &psn, &target_cid);
+
+  CFArrayRef displays = SLSCopyManagedDisplays(cid);
+  uint32_t space_count = CFArrayGetCount(displays);
+  uint64_t space_list[space_count];
+
+  for (int i = 0; i < space_count; i++) {
+    space_list[i] = SLSManagedDisplayGetCurrentSpace(cid,
+                                          CFArrayGetValueAtIndex(displays, i));
+  }
+
+  CFRelease(displays);
+
+  CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
+                                                   sizeof(uint64_t),
+                                                   space_count,
+                                                   kCFNumberSInt64Type);
+
+  uint64_t set_tags = 1;
+  uint64_t clear_tags = 0;
+  CFArrayRef window_list = SLSCopyWindowsWithOptionsAndTags(cid,
+                                                            target_cid,
+                                                            space_list_ref,
+                                                            0x2,
+                                                            &set_tags,
+                                                            &clear_tags    );
+
+  uint32_t wid = 0;
+  if (window_list) {
+    uint32_t window_count = CFArrayGetCount(window_list);
+    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
+    if (query) {
+      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+      if (iterator) {
+        wid = SLSWindowIteratorGetWindowID(iterator);
+        CFRelease(iterator);
+      }
+      CFRelease(query);
+    }
+    CFRelease(window_list);
+  }
+
+  CFRelease(space_list_ref);
+  return wid;
 }

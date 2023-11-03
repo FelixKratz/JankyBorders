@@ -1,6 +1,7 @@
 #include <CoreGraphics/CoreGraphics.h>
 
 extern int SLSMainConnectionID();
+extern CGError SLSWindowManagementBridgeSetDelegate(void* delegate);
 extern CGError SLSGetEventPort(int cid, mach_port_t* port_out);
 extern CGEventRef SLEventCreateNextEvent(int cid);
 extern void _CFMachPortSetOptions(CFMachPortRef mach_port, int options);

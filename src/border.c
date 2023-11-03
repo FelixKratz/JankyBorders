@@ -5,9 +5,8 @@
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
 extern float g_border_width;
-extern struct table g_windows;
 
-static void border_init(struct border* border) {
+void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
 }
 
@@ -17,7 +16,7 @@ void border_destroy(struct border* border) {
   free(border);
 }
 
-static void border_move(struct border* border) {
+void border_move(struct border* border) {
   int cid = SLSMainConnectionID();
   CFTypeRef transaction = SLSTransactionCreate(cid);
 
@@ -32,7 +31,7 @@ static void border_move(struct border* border) {
   CFRelease(transaction);
 }
 
-static void border_draw(struct border* border) {
+void border_draw(struct border* border) {
   int cid = SLSMainConnectionID();
 
   bool shown = false;
@@ -169,108 +168,13 @@ static void border_draw(struct border* border) {
   SLSReenableUpdate(cid);
 }
 
-struct border* border_create(uint32_t wid, uint64_t sid) {
-  struct border* border = table_find(&g_windows, &wid);
-  if (!border) {
-    border = malloc(sizeof(struct border));
-    border_init(border);
-    table_add(&g_windows, &wid, border);
-  }
-
-  border->target_wid = wid;
-  border->sid = sid;
-  border->needs_redraw = true;
-  border_draw(border);
-  return border;
-}
-
-void borders_update_border(uint32_t wid) {
-  struct border* border = table_find(&g_windows, &wid);
-  if (border) {
-    border_draw(border);
-  }
-}
-
-void borders_window_focus(uint32_t wid) {
-  for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
-    struct bucket* bucket = g_windows.buckets[window_index];
-    while (bucket) {
-      if (bucket->value) {
-        struct border* border = bucket->value;
-        if (border->focused && border->target_wid != wid) {
-          border->focused = false;
-          border->needs_redraw = true;
-          border_draw(border);
-        }
-
-        if (border->target_wid == wid) {
-          if (!border->focused) {
-            border->focused = true;
-            border->needs_redraw = true;
-            border_draw(border);
-          }
-        }
-      }
-
-      bucket = bucket->next;
-    }
-  }
-}
-
-void borders_move_border(uint32_t wid) {
-  struct border* border = table_find(&g_windows, &wid);
-  if (border) {
-    border_move(border);
-  }
-}
-
-uint32_t get_front_window() {
+void border_hide(struct border* border) {
   int cid = SLSMainConnectionID();
-  ProcessSerialNumber psn;
-  _SLPSGetFrontProcess(&psn);
-  int target_cid;
-  SLSGetConnectionIDForPSN(cid, &psn, &target_cid);
-
-  CFArrayRef displays = SLSCopyManagedDisplays(cid);
-  uint32_t space_count = CFArrayGetCount(displays);
-  uint64_t space_list[space_count];
-
-  for (int i = 0; i < space_count; i++) {
-    space_list[i] = SLSManagedDisplayGetCurrentSpace(cid,
-                                          CFArrayGetValueAtIndex(displays, i));
-  }
-
-  CFRelease(displays);
-
-  CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
-                                                   sizeof(uint64_t),
-                                                   space_count,
-                                                   kCFNumberSInt64Type);
-
-  uint64_t set_tags = 1;
-  uint64_t clear_tags = 0;
-  CFArrayRef window_list = SLSCopyWindowsWithOptionsAndTags(cid,
-                                                            target_cid,
-                                                            space_list_ref,
-                                                            0x2,
-                                                            &set_tags,
-                                                            &clear_tags    );
-
-  uint32_t wid = 0;
-  if (window_list) {
-    uint32_t window_count = CFArrayGetCount(window_list);
-    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
-    if (query) {
-      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-      if (iterator) {
-        wid = SLSWindowIteratorGetWindowID(iterator);
-        CFRelease(iterator);
-      }
-      CFRelease(query);
-    }
-    CFRelease(window_list);
-  }
-
-  CFRelease(space_list_ref);
-  return wid;
+  SLSOrderWindow(cid, border->wid, 0, border->target_wid);
 }
+
+void border_unhide(struct border* border) {
+  int cid = SLSMainConnectionID();
+  SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+}
+

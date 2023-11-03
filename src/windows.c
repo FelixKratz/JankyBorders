@@ -1,15 +1,82 @@
 #include "windows.h"
 #include "hashtable.h"
 #include <string.h>
+#include "border.h"
 
-extern struct table g_windows;
+void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
+  struct border* border = table_find(windows, &wid);
+  if (!border) {
+    border = malloc(sizeof(struct border));
+    border_init(border);
+    table_add(windows, &wid, border);
+  }
 
-void update_window_notifications() {
+  border->target_wid = wid;
+  border->sid = sid;
+  border->needs_redraw = true;
+  border_draw(border);
+}
+
+void windows_window_update(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_draw(border);
+}
+
+void windows_window_focus(struct table* windows, uint32_t wid) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border->focused && border->target_wid != wid) {
+          border->focused = false;
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+
+        if (!border->focused && border->target_wid == wid) {
+          border->focused = true;
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+      }
+
+      bucket = bucket->next;
+    }
+  }
+}
+
+void windows_window_move(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_move(border);
+}
+
+void windows_window_hide(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_hide(border);
+}
+
+void windows_window_unhide(struct table* windows, uint32_t wid) {
+  struct border* border = table_find(windows, &wid);
+  if (border) border_unhide(border);
+}
+
+bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
+  struct border* border = table_find(windows, &wid);
+  if (border && border->sid == sid) {
+    table_remove(windows, &wid);
+    border_destroy(border);
+    return true;
+  }
+  return false;
+}
+
+void windows_update_notifications(struct table* windows) {
   int window_count = 0;
   uint32_t window_list[1024] = {};
 
-  for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
-    struct bucket *bucket = g_windows.buckets[window_index];
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket *bucket = windows->buckets[window_index];
     while (bucket) {
       if (bucket->value) {
         uint32_t wid = *(uint32_t *) bucket->key;
@@ -25,42 +92,8 @@ void update_window_notifications() {
                                     window_count          );
 }
 
-uint64_t window_space_id(int cid, uint32_t wid) {
-  uint64_t sid = 0;
-
-  CFArrayRef window_list_ref = cfarray_of_cfnumbers(&wid,
-                                                    sizeof(uint32_t),
-                                                    1,
-                                                    kCFNumberSInt32Type);
-
-  CFArrayRef space_list_ref = SLSCopySpacesForWindows(cid,
-                                                      0x7,
-                                                      window_list_ref);
-
-
-  if (space_list_ref) {
-    int count = CFArrayGetCount(space_list_ref);
-    if (count > 0) {
-      CFNumberRef id_ref = CFArrayGetValueAtIndex(space_list_ref, 0);
-      CFNumberGetValue(id_ref, CFNumberGetType(id_ref), &sid);
-    }
-    CFRelease(space_list_ref);
-  }
-  CFRelease(window_list_ref);
-
-  if (sid) return sid;
-
-  CFStringRef uuid = SLSCopyManagedDisplayForWindow(cid, wid);
-  if (uuid) {
-    uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid);
-    CFRelease(uuid);
-    return sid;
-  }
-
-  return 0;
-}
-
-void windows_add_existing_windows(int cid, struct table* windows) {
+void windows_add_existing_windows(struct table* windows) {
+  int cid = SLSMainConnectionID();
   uint64_t* space_list = NULL;
   int space_count = 0;
 
@@ -101,7 +134,7 @@ void windows_add_existing_windows(int cid, struct table* windows) {
   CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(cid,
                                                                 0,
                                                                 space_list_ref,
-                                                                0x2,
+                                                                0x7,
                                                                 &set_tags,
                                                                 &clear_tags  );
   if (window_list_ref) {
@@ -113,20 +146,11 @@ void windows_add_existing_windows(int cid, struct table* windows) {
       while (SLSWindowIteratorAdvance(iterator)) {
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-          uint64_t sid = window_space_id(cid, wid);
-          struct border* border = border_create(wid, sid);
-          CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
-                                                       sizeof(uint32_t),
-                                                       1,
-                                                       kCFNumberSInt32Type);
-
-          border->sid = sid;
-          SLSMoveWindowsToManagedSpace(cid, border_ref, sid);
-          CFRelease(border_ref);
+          windows_window_create(windows, wid, 0);
         });
       }
 
-      update_window_notifications();
+      windows_update_notifications(windows);
       CFRelease(query);
       CFRelease(iterator);
     }
@@ -134,14 +158,4 @@ void windows_add_existing_windows(int cid, struct table* windows) {
   }
   CFRelease(space_list_ref);
   free(space_list);
-}
-
-bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid) {
-  struct border* border = table_find(windows, &wid);
-  if (border && border->sid == sid) {
-    table_remove(windows, &wid);
-    border_destroy(border);
-    return true;
-  }
-  return false;
 }

@@ -17,9 +17,12 @@
   } \
 }
 
-void windows_add_existing_windows(int cid, struct table* windows);
-uint64_t window_space_id(int cid, uint32_t wid);
-bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid);
-void update_window_notifications(void);
-
-uint64_t window_space_id(int cid, uint32_t wid);
+void windows_window_update(struct table* windows, uint32_t wid);
+void windows_window_focus(struct table* windows, uint32_t wid);
+void windows_window_hide(struct table* windows, uint32_t wid);
+void windows_window_unhide(struct table* windows, uint32_t wid);
+void windows_window_move(struct table* windows, uint32_t wid);
+void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid);
+bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid);
+void windows_add_existing_windows(struct table* windows);
+void windows_update_notifications(struct table* windows);

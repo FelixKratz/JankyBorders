@@ -30,7 +30,6 @@ void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
   } while (event != NULL);
 }
 
-extern CGError SLSWindowManagementBridgeSetDelegate(void* delegate);
 int main(int argc, char** argv) {
   if (argc == 4) {
     if (sscanf(argv[1], "active_color=0x%x", &g_active_window_color) != 1) {
@@ -79,7 +78,7 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
-  windows_add_existing_windows(SLSMainConnectionID(), &g_windows);
+  windows_add_existing_windows(&g_windows);
   CFRunLoopRun();
 
   return 0;

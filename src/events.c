@@ -46,7 +46,7 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
       if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
         if (SLSWindowIteratorAdvance(iterator)) {
           ITERATOR_WINDOW_SUITABLE(iterator, {
-            windows_add_window(&g_windows, wid, sid);
+            border_create(wid, sid);
             update_window_notifications();
           });
         }
@@ -90,7 +90,7 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
     borders_window_focus(wid);
   } else if (event == EVENT_WINDOW_UNHIDE) {
     printf("Window Unhide: %d\n", wid);
-    windows_add_window(&g_windows, wid, window_space_id(cid, wid));
+    border_create(wid, window_space_id(cid, wid));
   } else if (event == EVENT_WINDOW_HIDE) {
     printf("Window Hide: %d\n", wid);
     borders_remove_border(wid);

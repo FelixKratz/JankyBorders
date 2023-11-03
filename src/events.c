@@ -58,7 +58,7 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
   } else if (event == EVENT_WINDOW_DESTROY) {
     printf("Window Destroyed: %d\n", wid);
     if (windows_remove_window(&g_windows, wid, sid)) {
-        update_window_notifications();
+      update_window_notifications();
     }
 
     borders_window_focus(get_front_window());

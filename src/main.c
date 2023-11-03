@@ -11,12 +11,12 @@ struct table g_windows;
 
 static TABLE_HASH_FUNC(hash_windows)
 {
-    return *(uint32_t *) key;
+  return *(uint32_t *) key;
 }
 
 static TABLE_COMPARE_FUNC(cmp_windows)
 {
-    return *(uint32_t *) key_a == *(uint32_t *) key_b;
+  return *(uint32_t *) key_a == *(uint32_t *) key_b;
 }
 
 void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {

@@ -208,23 +208,23 @@ void borders_update_border(uint32_t wid) {
 
 void borders_window_focus(uint32_t wid) {
   for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
-    struct bucket *bucket = g_windows.buckets[window_index];
+    struct bucket* bucket = g_windows.buckets[window_index];
     while (bucket) {
       if (bucket->value) {
-          struct border* border = bucket->value;
-          if (border->focused && border->target_wid != wid) {
-            border->focused = false;
+        struct border* border = bucket->value;
+        if (border->focused && border->target_wid != wid) {
+          border->focused = false;
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+
+        if (border->target_wid == wid) {
+          if (!border->focused) {
+            border->focused = true;
             border->needs_redraw = true;
             border_draw(border);
           }
-
-          if (border->target_wid == wid) {
-            if (!border->focused) {
-              border->focused = true;
-              border->needs_redraw = true;
-              border_draw(border);
-            }
-          }
+        }
       }
 
       bucket = bucket->next;

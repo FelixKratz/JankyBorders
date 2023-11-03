@@ -4,24 +4,25 @@
 
 extern struct table g_windows;
 
-void update_window_notifications(void)
-{
-    int window_count = 0;
-    uint32_t window_list[1024] = {};
+void update_window_notifications() {
+  int window_count = 0;
+  uint32_t window_list[1024] = {};
 
-    for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
-        struct bucket *bucket = g_windows.buckets[window_index];
-        while (bucket) {
-            if (bucket->value) {
-                uint32_t wid = *(uint32_t *) bucket->key;
-                window_list[window_count++] = wid;
-            }
+  for (int window_index = 0; window_index < g_windows.capacity; ++window_index) {
+    struct bucket *bucket = g_windows.buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        uint32_t wid = *(uint32_t *) bucket->key;
+        window_list[window_count++] = wid;
+      }
 
-            bucket = bucket->next;
-        }
+      bucket = bucket->next;
     }
+  }
 
-    SLSRequestNotificationsForWindows(SLSMainConnectionID(), window_list, window_count);
+  SLSRequestNotificationsForWindows(SLSMainConnectionID(),
+                                    window_list,
+                                    window_count          );
 }
 
 uint64_t window_space_id(int cid, uint32_t wid) {
@@ -60,7 +61,7 @@ uint64_t window_space_id(int cid, uint32_t wid) {
 }
 
 void windows_add_existing_windows(int cid, struct table* windows) {
-  uint64_t *space_list = NULL;
+  uint64_t* space_list = NULL;
   int space_count = 0;
 
   CFArrayRef display_spaces_ref = SLSCopyManagedDisplaySpaces(cid);
@@ -112,16 +113,7 @@ void windows_add_existing_windows(int cid, struct table* windows) {
       while (SLSWindowIteratorAdvance(iterator)) {
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
-          uint64_t sid = window_space_id(cid, wid);
-          struct border* border = windows_add_window(windows, wid, sid);
-          CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
-                                                       sizeof(uint32_t),
-                                                       1,
-                                                       kCFNumberSInt32Type);
-
-          border->sid = sid;
-          SLSMoveWindowsToManagedSpace(cid, border_ref, sid);
-          CFRelease(border_ref);
+          windows_add_window(windows, wid, 0);
         });
       }
 
@@ -136,13 +128,13 @@ void windows_add_existing_windows(int cid, struct table* windows) {
 }
 
 struct border* windows_add_window(struct table* windows, uint32_t wid, uint64_t sid) {
-    struct border *border = border_create(wid, sid);
-    table_add(windows, &wid, border);
-    return border;
+  struct border* border = border_create(wid, sid);
+  table_add(windows, &wid, border);
+  return border;
 }
 
 bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid) {
-  struct border *border = table_find(windows, &wid);
+  struct border* border = table_find(windows, &wid);
   if (border && border->sid == sid) {
     table_remove(windows, &wid);
     border_destroy(border);

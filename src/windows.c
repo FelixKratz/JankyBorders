@@ -113,7 +113,7 @@ void windows_add_existing_windows(int cid, struct table* windows) {
         ITERATOR_WINDOW_SUITABLE(iterator, {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
           uint64_t sid = window_space_id(cid, wid);
-          struct border* border = windows_add_window(windows, wid, sid);
+          struct border* border = border_create(wid, sid);
           CFArrayRef border_ref = cfarray_of_cfnumbers(&border->wid,
                                                        sizeof(uint32_t),
                                                        1,
@@ -133,12 +133,6 @@ void windows_add_existing_windows(int cid, struct table* windows) {
   }
   CFRelease(space_list_ref);
   free(space_list);
-}
-
-struct border* windows_add_window(struct table* windows, uint32_t wid, uint64_t sid) {
-    struct border *border = border_create(wid, sid);
-    table_add(windows, &wid, border);
-    return border;
 }
 
 bool windows_remove_window(struct table* windows, uint32_t wid, uint64_t sid) {

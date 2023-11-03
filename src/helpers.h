@@ -145,3 +145,12 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
   SLSMoveWindowsToManagedSpace(cid, window_list, sid);
   CFRelease(window_list);
 }
+
+static inline void debug(const char* message, ...) {
+#ifdef DEBUG
+  va_list va;
+  va_start(va, message);
+  vprintf(message, va);
+  va_end(va);
+#endif
+}

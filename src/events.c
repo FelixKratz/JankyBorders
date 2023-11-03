@@ -47,6 +47,7 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
       if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
         if (SLSWindowIteratorAdvance(iterator)) {
           ITERATOR_WINDOW_SUITABLE(iterator, {
+            debug("Window Created: %d %d\n", wid, sid);
             windows_window_create(windows, wid, sid);
             windows_update_notifications(windows);
           });
@@ -57,7 +58,7 @@ static void window_spawn_handler(uint32_t event, void* data, size_t data_length,
     }
     CFRelease(target_ref);
   } else if (event == EVENT_WINDOW_DESTROY) {
-    printf("Window Destroyed: %d\n", wid);
+    debug("Window Destroyed: %d %d\n", wid, sid);
     if (windows_window_destroy(windows, wid, sid)) {
       windows_update_notifications(windows);
     }
@@ -72,12 +73,12 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
   struct table* windows = &g_windows;
 
   if (event == EVENT_WINDOW_MOVE) {
-    printf("Window Move: %d\n", wid);
+    debug("Window Move: %d\n", wid);
     windows_window_move(windows, wid);
   } else if (event == EVENT_WINDOW_RESIZE) {
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_REORDER) {
-    printf("Window Reorder: %d\n", wid);
+    debug("Window Reorder: %d\n", wid);
 
     // The update of the front window might not have taken place yet...
     usleep(10000);
@@ -85,17 +86,17 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
     windows_window_focus(windows, get_front_window());
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_LEVEL) {
-    printf("Window Level: %d\n", wid);
+    debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
     wid = get_front_window();
-    printf("Window Focus: %d\n", wid);
+    debug("Window Focus: %d\n", wid);
     windows_window_focus(windows, wid);
   } else if (event == EVENT_WINDOW_UNHIDE) {
-    printf("Window Unhide: %d\n", wid);
+    debug("Window Unhide: %d\n", wid);
     windows_window_unhide(windows, wid);
   } else if (event == EVENT_WINDOW_HIDE) {
-    printf("Window Hide: %d\n", wid);
+    debug("Window Hide: %d\n", wid);
     windows_window_hide(windows, wid);
   }
 }
@@ -121,7 +122,9 @@ void events_register() {
 
   SLSRegisterNotifyProc(space_handler, EVENT_SPACE_CHANGE, cid_ctx);
 
-  // for (int i = 0; i < 2000; i++) {
-  //   SLSRegisterNotifyProc(event_watcher, i, NULL);
-  // }
+#ifdef DEBUG
+  for (int i = 0; i < 2000; i++) {
+    SLSRegisterNotifyProc(event_watcher, i, NULL);
+  }
+#endif
 }

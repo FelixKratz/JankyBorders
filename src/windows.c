@@ -40,7 +40,6 @@ void windows_window_focus(struct table* windows, uint32_t wid) {
           border_draw(border);
         }
       }
-
       bucket = bucket->next;
     }
   }
@@ -82,7 +81,6 @@ void windows_update_notifications(struct table* windows) {
         uint32_t wid = *(uint32_t *) bucket->key;
         window_list[window_count++] = wid;
       }
-
       bucket = bucket->next;
     }
   }

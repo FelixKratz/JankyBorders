@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-void table_init(struct table *table, int capacity, table_hash_func hash, table_compare_func cmp) {
+void table_init(struct table* table, int capacity, table_hash_func hash, table_compare_func cmp) {
   table->count = 0;
   table->capacity = capacity;
   table->max_load = 0.75f;
   table->hash = hash;
   table->cmp = cmp;
-  table->buckets = malloc(sizeof(struct bucket *) * capacity);
-  memset(table->buckets, 0, sizeof(struct bucket *) * capacity);
+  table->buckets = malloc(sizeof(struct bucket*) * capacity);
+  memset(table->buckets, 0, sizeof(struct bucket*) * capacity);
 }
 
 void table_free(struct table *table) {
@@ -29,8 +29,9 @@ void table_free(struct table *table) {
   }
 }
 
-struct bucket** table_get_bucket(struct table *table, void *key) {
-  struct bucket** bucket = table->buckets + (table->hash(key) % table->capacity);
+struct bucket** table_get_bucket(struct table* table, void* key) {
+  struct bucket** bucket = table->buckets
+                           + (table->hash(key) % table->capacity);
   while (*bucket) {
     if (table->cmp((*bucket)->key, key)) {
       break;
@@ -99,7 +100,7 @@ void table_remove(struct table* table, void* key) {
   }
 }
 
-void *table_find(struct table* table, void* key) {
+void* table_find(struct table* table, void* key) {
   struct bucket* bucket = *table_get_bucket(table, key);
   return bucket ? bucket->value : NULL;
 }

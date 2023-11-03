@@ -120,3 +120,28 @@ static inline uint64_t window_space_id(int cid, uint32_t wid) {
   return 0;
 }
 
+static inline int window_level(int cid, uint32_t wid) {
+  CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
+                                               sizeof(uint32_t),
+                                               1,
+                                               kCFNumberSInt32Type );
+
+  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
+  CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+  int level = SLSWindowIteratorGetLevel(iterator, 0);
+  CFRelease(iterator);
+  CFRelease(query);
+  CFRelease(target_ref);
+
+  return level;
+}
+
+static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
+  CFArrayRef window_list = cfarray_of_cfnumbers(&wid,
+                                                sizeof(uint32_t),
+                                                1,
+                                                kCFNumberSInt32Type);
+
+  SLSMoveWindowsToManagedSpace(cid, window_list, sid);
+  CFRelease(window_list);
+}

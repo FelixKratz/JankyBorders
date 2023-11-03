@@ -27,7 +27,7 @@ void table_init(struct table* table, int capacity, table_hash_func hash, table_c
 void table_free(struct table* table);
 
 #define table_add(table, key, value) _table_add(table, key, sizeof(*key), value)
-void _table_add(struct table* table, void* key, int key_size, void *value);
+void _table_add(struct table* table, void* key, int key_size, void* value);
 void table_remove(struct table* table, void* key);
 void* table_find(struct table* table, void* key);
 

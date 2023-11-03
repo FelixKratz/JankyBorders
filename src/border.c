@@ -32,6 +32,8 @@ void border_move(struct border* border) {
 }
 
 void border_draw(struct border* border) {
+  static const float border_radius = 9.f;
+
   int cid = SLSMainConnectionID();
   if (!is_space_visible(cid, border->sid)) return;
 
@@ -45,28 +47,13 @@ void border_draw(struct border* border) {
   }
   if (!shown) return;
 
-  CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-
-  float border_width = g_border_width;
-  float border_radius = 9.f;
-  CGRect frame = CGRectInset(window_frame, -border_width, -border_width);
-
-  CFArrayRef target_ref = cfarray_of_cfnumbers(&border->target_wid,
-                                               sizeof(uint32_t),
-                                               1,
-                                               kCFNumberSInt32Type );
-
-  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
-  CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-  int level = SLSWindowIteratorGetLevel(iterator, 0);
-  CFRelease(iterator);
-  CFRelease(query);
-  CFRelease(target_ref);
-
+  int level = window_level(cid, border->target_wid);
   int sub_level = 0;
   SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
 
+  CGRect window_frame;
+  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  CGRect frame = CGRectInset(window_frame, -g_border_width, -g_border_width);
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
 
@@ -100,17 +87,8 @@ void border_draw(struct border* border) {
     border->needs_redraw = true;
     CFRelease(frame_region);
 
-    if (!border->sid) {
-      border->sid = window_space_id(cid, border->target_wid);
-    }
-
-    CFArrayRef window_list = cfarray_of_cfnumbers(&border->wid,
-                                                  sizeof(uint32_t),
-                                                  1,
-                                                  kCFNumberSInt32Type);
-
-    SLSMoveWindowsToManagedSpace(cid, window_list, border->sid);
-    CFRelease(window_list);
+    if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
+    window_send_to_space(cid, border->wid, border->sid);
   }
 
   if (!CGRectEqualToRect(frame, border->bounds)) {
@@ -129,9 +107,9 @@ void border_draw(struct border* border) {
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
-    CGRect path_rect = (CGRect) {{ border_width, border_width },
-                                 { frame.size.width - 2.f*border_width,
-                                   frame.size.height - 2.f*border_width }};
+    CGRect path_rect = (CGRect) {{ g_border_width, g_border_width },
+                                 { frame.size.width - 2.f*g_border_width,
+                                   frame.size.height - 2.f*g_border_width }};
 
     CGPathRef path = CGPathCreateWithRoundedRect(path_rect,
                                                  border_radius,
@@ -140,18 +118,18 @@ void border_draw(struct border* border) {
 
     if (border->focused) {
       CGContextSetRGBStrokeColor(border->context,
-                                 ((g_active_window_color >> 16) & 0xff) / 255.f,
-                                 ((g_active_window_color >> 8) & 0xff) / 255.f,
-                                 ((g_active_window_color >> 0) & 0xff) / 255.f,
-                                 ((g_active_window_color >> 24) & 0xff) / 255.f );
+                              ((g_active_window_color >> 16) & 0xff) / 255.f,
+                              ((g_active_window_color >> 8) & 0xff) / 255.f,
+                              ((g_active_window_color >> 0) & 0xff) / 255.f,
+                              ((g_active_window_color >> 24) & 0xff) / 255.f );
     } else {
       CGContextSetRGBStrokeColor(border->context,
-                                 ((g_inactive_window_color >> 16) & 0xff) / 255.f,
-                                 ((g_inactive_window_color >> 8) & 0xff) / 255.f,
-                                 ((g_inactive_window_color >> 0) & 0xff) / 255.f,
-                                 ((g_inactive_window_color >> 24) & 0xff) / 255.f );
+                            ((g_inactive_window_color >> 16) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 8) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 0) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 24) & 0xff) / 255.f );
     }
-    CGContextSetLineWidth(border->context, border_width);
+    CGContextSetLineWidth(border->context, g_border_width);
 
     CGContextClearRect(border->context, frame);
     CGContextAddPath(border->context, path);
@@ -177,4 +155,3 @@ void border_hide(struct border* border) {
 void border_unhide(struct border* border) {
   border_draw(border);
 }
-

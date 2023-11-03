@@ -1,5 +1,6 @@
 #include "border.h"
 #include "hashtable.h"
+#include "windows.h"
 
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
@@ -61,6 +62,7 @@ static void border_draw(struct border* border) {
   int level = SLSWindowIteratorGetLevel(iterator, 0);
   CFRelease(iterator);
   CFRelease(query);
+  CFRelease(target_ref);
 
   int sub_level = 0;
   SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
@@ -99,17 +101,8 @@ static void border_draw(struct border* border) {
     CFRelease(frame_region);
 
     if (!border->sid) {
-      CFArrayRef spaces = SLSCopySpacesForWindows(cid, 0x2, target_ref);
-      if (CFArrayGetCount(spaces) > 0) {
-        CFNumberRef number = CFArrayGetValueAtIndex(spaces, 0);
-        uint64_t sid;
-        CFNumberGetValue(number, CFNumberGetType(number), &sid);
-        border->sid = sid;
-        CFRelease(number);
-      }
-      CFRelease(spaces);
+      border->sid = window_space_id(cid, border->target_wid);
     }
-    CFRelease(target_ref);
 
     CFArrayRef window_list = cfarray_of_cfnumbers(&border->wid,
                                                   sizeof(uint32_t),

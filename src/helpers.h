@@ -55,7 +55,7 @@ static inline uint32_t get_front_window() {
     CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
     if (query) {
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-      if (iterator) {
+      if (iterator && SLSWindowIteratorAdvance(iterator)) {
         wid = SLSWindowIteratorGetWindowID(iterator);
         CFRelease(iterator);
       }

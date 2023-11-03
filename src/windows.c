@@ -94,7 +94,7 @@ void windows_add_existing_windows(int cid, struct windows* windows, struct borde
   CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(cid,
                                                                 0,
                                                                 space_list_ref,
-                                                                0x2,
+                                                                0x7,
                                                                 &set_tags,
                                                                 &clear_tags  );
   if (window_list_ref) {

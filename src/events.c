@@ -83,6 +83,7 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
     usleep(10000);
 
     windows_window_focus(windows, get_front_window());
+    windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_LEVEL) {
     printf("Window Level: %d\n", wid);
     windows_window_update(windows, wid);

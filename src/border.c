@@ -175,10 +175,6 @@ void border_hide(struct border* border) {
 }
 
 void border_unhide(struct border* border) {
-  if (!border->wid) border_draw(border);
-  else {
-    int cid = SLSMainConnectionID();
-    SLSOrderWindow(cid, border->wid, -1, border->target_wid);
-  }
+  border_draw(border);
 }
 

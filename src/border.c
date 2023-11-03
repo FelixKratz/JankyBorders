@@ -33,6 +33,7 @@ void border_move(struct border* border) {
 
 void border_draw(struct border* border) {
   int cid = SLSMainConnectionID();
+  if (!is_space_visible(cid, border->sid)) return;
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);

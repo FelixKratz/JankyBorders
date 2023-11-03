@@ -99,6 +99,10 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
   }
 }
 
+static void space_handler(uint32_t event, void* data, size_t data_length, void* context) {
+  windows_draw_borders_on_current_spaces(&g_windows);
+}
+
 void events_register() {
   int cid = SLSMainConnectionID();
   void* cid_ctx = (void*)(intptr_t)cid;
@@ -113,6 +117,8 @@ void events_register() {
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_UPDATE, cid_ctx);
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_CREATE, cid_ctx);
   SLSRegisterNotifyProc(window_spawn_handler, EVENT_WINDOW_DESTROY, cid_ctx);
+
+  SLSRegisterNotifyProc(space_handler, EVENT_SPACE_CHANGE, cid_ctx);
 
   // for (int i = 0; i < 2000; i++) {
   //   SLSRegisterNotifyProc(event_watcher, i, NULL);

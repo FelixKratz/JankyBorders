@@ -92,6 +92,55 @@ void windows_update_notifications(struct table* windows) {
                                     window_count          );
 }
 
+void windows_draw_borders_on_current_spaces(struct table* windows) {
+  int cid = SLSMainConnectionID();
+  CFArrayRef displays = SLSCopyManagedDisplays(cid);
+  uint32_t space_count = CFArrayGetCount(displays);
+  uint64_t space_list[space_count];
+
+  for (int i = 0; i < space_count; i++) {
+    space_list[i] = SLSManagedDisplayGetCurrentSpace(cid,
+                                          CFArrayGetValueAtIndex(displays, i));
+  }
+
+  CFRelease(displays);
+
+  CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
+                                                   sizeof(uint64_t),
+                                                   space_count,
+                                                   kCFNumberSInt64Type);
+
+  uint64_t set_tags = 1;
+  uint64_t clear_tags = 0;
+  CFArrayRef window_list = SLSCopyWindowsWithOptionsAndTags(cid,
+                                                            0,
+                                                            space_list_ref,
+                                                            0x2,
+                                                            &set_tags,
+                                                            &clear_tags    );
+
+  if (window_list) {
+    uint32_t window_count = CFArrayGetCount(window_list);
+    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
+    if (query) {
+      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+      if (iterator) {
+        while(SLSWindowIteratorAdvance(iterator)) {
+          ITERATOR_WINDOW_SUITABLE(iterator, {
+            uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
+            struct border* border = table_find(windows, &wid);
+            if (border) border_draw(border);
+          });
+        }
+      }
+      CFRelease(query);
+    }
+    CFRelease(window_list);
+  }
+
+  CFRelease(space_list_ref);
+}
+
 void windows_add_existing_windows(struct table* windows) {
   int cid = SLSMainConnectionID();
   uint64_t* space_list = NULL;

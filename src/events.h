@@ -14,4 +14,6 @@
 #define EVENT_WINDOW_CREATE  1325
 #define EVENT_WINDOW_DESTROY 1326
 
+#define EVENT_SPACE_CHANGE   1401
+
 void events_register();

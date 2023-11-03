@@ -184,14 +184,6 @@ struct border* border_create(uint32_t wid, uint64_t sid) {
   return border;
 }
 
-void borders_remove_border(uint32_t wid) {
-  struct border* border = table_find(&g_windows, &wid);
-  if (border) {
-    table_remove(&g_windows, &wid);
-    border_destroy(border);
-  }
-}
-
 void borders_update_border(uint32_t wid) {
   struct border* border = table_find(&g_windows, &wid);
   if (border) {

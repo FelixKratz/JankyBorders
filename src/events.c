@@ -90,10 +90,16 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
     borders_window_focus(wid);
   } else if (event == EVENT_WINDOW_UNHIDE) {
     printf("Window Unhide: %d\n", wid);
-    border_create(wid, window_space_id(cid, wid));
+    struct border *border = table_find(&g_windows, &wid);
+    if (border) {
+      SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+    }
   } else if (event == EVENT_WINDOW_HIDE) {
     printf("Window Hide: %d\n", wid);
-    borders_remove_border(wid);
+    struct border *border = table_find(&g_windows, &wid);
+    if (border) {
+      SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+    }
   }
 }
 

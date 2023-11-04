@@ -41,3 +41,6 @@ If you want to run this as a separate service, you could also use:
 ```bash
 brew services start borders
 ```
+
+## Documentation
+Local documentation is available as `man borders`.

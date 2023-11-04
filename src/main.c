@@ -42,7 +42,7 @@ static void acquire_lockfile(void) {
   };
 
   if (fcntl(handle, F_SETLK, &lockfd) == -1) {
-    error("JankyBorders: could not acquire lock-file! abort..\n");
+    error("JankyBorders: could not acquire lock-file! already running?\n");
   }
 }
 

@@ -19,6 +19,33 @@ static TABLE_COMPARE_FUNC(cmp_windows)
   return *(uint32_t *) key_a == *(uint32_t *) key_b;
 }
 
+static void acquire_lockfile(void) {
+  char *user = getenv("USER");
+  if (!user) {
+    error("JankyBorders: 'env USER' not set! abort..\n");
+  }
+
+  char lock_file[4096] = {};
+  snprintf(lock_file, sizeof(lock_file), "/tmp/JankyBorders_%s.lock", user);
+
+  int handle = open(lock_file, O_CREAT | O_WRONLY, 0600);
+  if (handle == -1) {
+    error("JankyBorders: could not create lock-file! abort..\n");
+  }
+
+  struct flock lockfd = {
+    .l_start  = 0,
+    .l_len    = 0,
+    .l_pid    = g_pid,
+    .l_type   = F_WRLCK,
+    .l_whence = SEEK_SET
+  };
+
+  if (fcntl(handle, F_SETLK, &lockfd) == -1) {
+    error("JankyBorders: could not acquire lock-file! abort..\n");
+  }
+}
+
 void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
   int cid = SLSMainConnectionID();
   CGEventRef event = SLEventCreateNextEvent(cid);
@@ -53,6 +80,7 @@ int main(int argc, char** argv) {
   }
 
   pid_for_task(mach_task_self(), &g_pid);
+  acquire_lockfile();
   table_init(&g_windows, 1024, hash_windows, cmp_windows);
   events_register();
 

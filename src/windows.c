@@ -17,6 +17,54 @@ void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   border_draw(border);
 }
 
+void windows_window_update_all(struct table* windows) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border) {
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+      }
+      bucket = bucket->next;
+    }
+  }
+}
+
+void windows_window_update_active(struct table* windows) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border && border->focused) {
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+      }
+      bucket = bucket->next;
+    }
+  }
+}
+
+void windows_window_update_inactive(struct table* windows) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border && !border->focused) {
+          border->needs_redraw = true;
+          border_draw(border);
+        }
+      }
+      bucket = bucket->next;
+    }
+  }
+}
+
 void windows_window_update(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
   if (border) border_draw(border);

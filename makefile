@@ -1,8 +1,11 @@
+FILES = src/main.c src/mach.c src/hashtable.c src/events.c src/windows.c src/border.c 
+LIBS = -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLight
+
 all: | bin
-	clang -std=c99 -O3 -g src/main.c src/hashtable.c src/events.c src/windows.c src/border.c -o bin/borders -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLight
+	clang -std=c99 -O3 -g $(FILES) -o bin/borders $(LIBS)
 
 debug:
-	clang -std=c99 -O0 -g -DDEBUG src/main.c src/hashtable.c src/events.c src/windows.c src/border.c -o bin/debug -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLight
+	clang -std=c99 -O0 -g -DDEBUG $(FILES) -o bin/debug $(LIBS)
 
 bin:
 	mkdir bin

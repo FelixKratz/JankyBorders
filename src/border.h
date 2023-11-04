@@ -5,6 +5,12 @@
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
 
+#define BORDER_UPDATE_MASK_NONE      0
+#define BORDER_UPDATE_MASK_ACTIVE   (1 << 0)
+#define BORDER_UPDATE_MASK_INACTIVE (1 << 1)
+#define BORDER_UPDATE_MASK_ALL      (BORDER_UPDATE_MASK_ACTIVE \
+                                     | BORDER_UPDATE_MASK_INACTIVE)
+
 struct settings {
   uint32_t active_window_color;
   uint32_t inactive_window_color;

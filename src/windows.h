@@ -18,6 +18,10 @@
 }
 
 void windows_window_update(struct table* windows, uint32_t wid);
+void windows_window_update_inactive(struct table* windows);
+void windows_window_update_active(struct table* windows);
+void windows_window_update_all(struct table* windows);
+
 void windows_window_focus(struct table* windows, uint32_t wid);
 void windows_window_hide(struct table* windows, uint32_t wid);
 void windows_window_unhide(struct table* windows, uint32_t wid);

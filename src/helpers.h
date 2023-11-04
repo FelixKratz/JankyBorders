@@ -154,3 +154,11 @@ static inline void debug(const char* message, ...) {
   va_end(va);
 #endif
 }
+
+static inline void error(const char* message, ...) {
+  va_list va;
+  va_start(va, message);
+  vfprintf(stderr, message, va);
+  va_end(va);
+  exit(EXIT_FAILURE);
+}

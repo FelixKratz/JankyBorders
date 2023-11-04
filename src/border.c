@@ -2,10 +2,11 @@
 #include "hashtable.h"
 #include "windows.h"
 
-extern uint32_t g_active_window_color;
-extern uint32_t g_inactive_window_color;
-extern float g_border_width;
-extern char g_border_style;
+struct settings g_settings = { .active_window_color = 0xffe1e3e4,
+                               .inactive_window_color = 0xff494d64,
+                               .border_width = 4.f,
+                               .border_style = BORDER_STYLE_ROUND  };
+
 
 void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
@@ -23,7 +24,9 @@ void border_move(struct border* border) {
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-  CGRect frame = CGRectInset(window_frame, -g_border_width, -g_border_width);
+  CGRect frame = CGRectInset(window_frame,
+                             -g_settings.border_width,
+                             -g_settings.border_width );
   SLSTransactionMoveWindowWithGroup(transaction, border->wid, frame.origin);
 
   SLSTransactionCommit(transaction, true);
@@ -54,7 +57,10 @@ void border_draw(struct border* border) {
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-  CGRect frame = CGRectInset(window_frame, -g_border_width, -g_border_width);
+  CGRect frame = CGRectInset(window_frame,
+                             -g_settings.border_width,
+                             -g_settings.border_width );
+
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
 
@@ -108,47 +114,32 @@ void border_draw(struct border* border) {
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
-    if (border->focused) {
-      CGContextSetRGBStrokeColor(border->context,
-                              ((g_active_window_color >> 16) & 0xff) / 255.f,
-                              ((g_active_window_color >> 8) & 0xff) / 255.f,
-                              ((g_active_window_color >> 0) & 0xff) / 255.f,
-                              ((g_active_window_color >> 24) & 0xff) / 255.f );
+    uint32_t color = border->focused
+                     ? g_settings.active_window_color
+                     : g_settings.inactive_window_color;
 
-      CGContextSetRGBFillColor(border->context,
-                              ((g_active_window_color >> 16) & 0xff) / 255.f,
-                              ((g_active_window_color >> 8) & 0xff) / 255.f,
-                              ((g_active_window_color >> 0) & 0xff) / 255.f,
-                              ((g_active_window_color >> 24) & 0xff) / 255.f );
-    } else {
-      CGContextSetRGBStrokeColor(border->context,
-                            ((g_inactive_window_color >> 16) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 8) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 0) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 24) & 0xff) / 255.f );
+    float r = ((color >> 16) & 0xff) / 255.f;
+    float g = ((color >> 8) & 0xff) / 255.f;
+    float b = ((color >> 0) & 0xff) / 255.f;
+    float a = ((color >> 24) & 0xff) / 255.f;
 
-      CGContextSetRGBFillColor(border->context,
-                            ((g_inactive_window_color >> 16) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 8) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 0) & 0xff) / 255.f,
-                            ((g_inactive_window_color >> 24) & 0xff) / 255.f );
-    }
-
-    CGContextSetLineWidth(border->context, g_border_width);
+    CGContextSetRGBStrokeColor(border->context, r, g, b, a);
+    CGContextSetRGBFillColor(border->context, r, g, b, a);
+    CGContextSetLineWidth(border->context, g_settings.border_width);
     CGContextClearRect(border->context, frame);
 
-    if (g_border_style == BORDER_STYLE_SQUARE) {
+    if (g_settings.border_style == BORDER_STYLE_SQUARE) {
       CGRect square_rect = CGRectInset(frame,
-                                       g_border_width / 2.f,
-                                       g_border_width / 2.f );
+                                       g_settings.border_width / 2.f,
+                                       g_settings.border_width / 2.f );
 
       CGPathRef square = CGPathCreateWithRect(square_rect, NULL);
       CGContextAddPath(border->context, square);
       CGContextFillPath(border->context);
 
       CGRect clip_rect = CGRectInset(frame,
-                                     2.f*g_border_width,
-                                     2.f*g_border_width );
+                                     2.f*g_settings.border_width,
+                                     2.f*g_settings.border_width );
 
       CGPathRef clip = CGPathCreateWithRoundedRect(clip_rect,
                                                    border_radius,
@@ -162,7 +153,7 @@ void border_draw(struct border* border) {
       CGContextSetBlendMode(border->context, kCGBlendModeNormal);
       CFRelease(clip);
     } else {
-      CGRect path_rect = CGRectInset(frame, g_border_width, g_border_width);
+      CGRect path_rect = CGRectInset(frame, g_settings.border_width, g_settings.border_width);
       CGPathRef path = CGPathCreateWithRoundedRect(path_rect,
                                                    border_radius,
                                                    border_radius,

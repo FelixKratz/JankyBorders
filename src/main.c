@@ -3,13 +3,15 @@
 #include "windows.h"
 #include <stdio.h>
 
-pid_t g_pid;
-uint32_t g_active_window_color = 0xffe1e3e4;
-uint32_t g_inactive_window_color = 0xff494d64;
-float g_border_width = 4.f;
-char g_border_style = BORDER_STYLE_ROUND;
+#define BORDER_UPDATE_MASK_NONE     0
+#define BORDER_UPDATE_MASK_ACTIVE   (1 << 0)
+#define BORDER_UPDATE_MASK_INACTIVE (1 << 1)
+#define BORDER_UPDATE_MASK_ALL      (BORDER_UPDATE_MASK_INACTIVE \
+                                     | BORDER_UPDATE_MASK_ACTIVE)
 
+pid_t g_pid;
 struct table g_windows;
+struct settings g_settings;
 
 static TABLE_HASH_FUNC(hash_windows)
 {
@@ -59,33 +61,38 @@ void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
   } while (event != NULL);
 }
 
+static int parse_settings(struct settings* settings, int count, char** arguments) {
+  int update_mask = 0;
+  for (int i = 0; i < count; i++) {
+    if (sscanf(arguments[i],
+               "active_color=0x%x",
+               &settings->active_window_color) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
+      continue;
+    }
+    else if (sscanf(arguments[i],
+             "inactive_color=0x%x",
+             &settings->inactive_window_color) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
+      continue;
+    }
+    else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+      continue;
+    }
+    else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+      continue;
+    } else {
+      printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
+    }
+  }
+  return update_mask;
+}
+
 int main(int argc, char** argv) {
-  if (argc >= 4) {
-    if (sscanf(argv[1], "active_color=0x%x", &g_active_window_color) != 1) {
-      printf("Invalid first argument\n");
-      return 1;
-    }
-
-    if (sscanf(argv[2], "inactive_color=0x%x", &g_inactive_window_color) != 1) {
-      printf("Invalid second argument\n");
-      return 1;
-    }
-
-    if (sscanf(argv[3], "width=%f", &g_border_width) != 1) {
-      printf("Invalid third argument\n");
-      return 1;
-    }
-
-    if (argc >= 5) {
-      if (sscanf(argv[4], "style=%c", &g_border_style) != 1) {
-        printf("Invalid fourth argument\n");
-        return 1;
-      }
-    }
-  } else if (argc > 1) {
-    printf("Usage: <binary> <active_color_hex>"
-           " <inactive_color_hex> <border_width_float>\n");
-    return 1;
+  if (argc > 1) {
+    parse_settings(&g_settings, argc - 1, argv + 1);
   }
 
   pid_for_task(mach_task_self(), &g_pid);

@@ -5,6 +5,13 @@
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
 
+struct settings {
+  uint32_t active_window_color;
+  uint32_t inactive_window_color;
+  float border_width;
+  char border_style;
+};
+
 struct border {
   bool focused;
   bool needs_redraw;

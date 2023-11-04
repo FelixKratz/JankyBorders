@@ -24,7 +24,7 @@ which determine the color of the currently focused window, the inactive window
 and the width and style of the border respectively. The color hex shall be
 given in the format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red
 channel, `G` the green channel and `B` the blue channel. The `style` argument
-is optional and can take the values `round` and `square`.
+is optional and can take the values `round` and `square` (only on master, not released yet).
 
 ### Bootstrap with yabai
 For example, if you are using `yabai`, you could add:

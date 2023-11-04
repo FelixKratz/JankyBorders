@@ -11,7 +11,12 @@
 
 pid_t g_pid;
 struct table g_windows;
-struct settings g_settings;
+
+struct settings g_settings = { .active_window_color = 0xffe1e3e4,
+                               .inactive_window_color = 0xff494d64,
+                               .border_width = 4.f,
+                               .border_style = BORDER_STYLE_ROUND  };
+
 
 static TABLE_HASH_FUNC(hash_windows)
 {

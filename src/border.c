@@ -2,12 +2,7 @@
 #include "hashtable.h"
 #include "windows.h"
 
-struct settings g_settings = { .active_window_color = 0xffe1e3e4,
-                               .inactive_window_color = 0xff494d64,
-                               .border_width = 4.f,
-                               .border_style = BORDER_STYLE_ROUND  };
-
-
+extern struct settings g_settings;
 void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
 }

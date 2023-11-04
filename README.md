@@ -18,12 +18,13 @@ brew install borders
 The binary can be started via `borders` and takes either no arguments or
 the arguments (TODO: make this configurable during runtime):
 ```bash
-borders active_color=<color_hex> inactive_color=<color_hex> width=<float>
+borders active_color=<color_hex> inactive_color=<color_hex> width=<float> [optional: style=<style>]
 ```
 which determine the color of the currently focused window, the inactive window 
-and the width of the border respectively. The color hex shall be given in the
-format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red channel,
-`G` the green channel and `B` the blue channel.
+and the width and style of the border respectively. The color hex shall be
+given in the format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red
+channel, `G` the green channel and `B` the blue channel. The `style` argument
+is optional and can take the values `round` and `square`.
 
 ### Bootstrap with yabai
 For example, if you are using `yabai`, you could add:

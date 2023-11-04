@@ -5,6 +5,7 @@
 extern uint32_t g_active_window_color;
 extern uint32_t g_inactive_window_color;
 extern float g_border_width;
+extern char g_border_style;
 
 void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
@@ -32,7 +33,7 @@ void border_move(struct border* border) {
 }
 
 void border_draw(struct border* border) {
-  static const float border_radius = 9.f;
+  float border_radius = 9.f;
 
   int cid = SLSMainConnectionID();
   if (!is_space_visible(cid, border->sid)) return;
@@ -107,17 +108,14 @@ void border_draw(struct border* border) {
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
-    CGRect path_rect = (CGRect) {{ g_border_width, g_border_width },
-                                 { frame.size.width - 2.f*g_border_width,
-                                   frame.size.height - 2.f*g_border_width }};
-
-    CGPathRef path = CGPathCreateWithRoundedRect(path_rect,
-                                                 border_radius,
-                                                 border_radius,
-                                                 NULL          );
-
     if (border->focused) {
       CGContextSetRGBStrokeColor(border->context,
+                              ((g_active_window_color >> 16) & 0xff) / 255.f,
+                              ((g_active_window_color >> 8) & 0xff) / 255.f,
+                              ((g_active_window_color >> 0) & 0xff) / 255.f,
+                              ((g_active_window_color >> 24) & 0xff) / 255.f );
+
+      CGContextSetRGBFillColor(border->context,
                               ((g_active_window_color >> 16) & 0xff) / 255.f,
                               ((g_active_window_color >> 8) & 0xff) / 255.f,
                               ((g_active_window_color >> 0) & 0xff) / 255.f,
@@ -128,14 +126,54 @@ void border_draw(struct border* border) {
                             ((g_inactive_window_color >> 8) & 0xff) / 255.f,
                             ((g_inactive_window_color >> 0) & 0xff) / 255.f,
                             ((g_inactive_window_color >> 24) & 0xff) / 255.f );
-    }
-    CGContextSetLineWidth(border->context, g_border_width);
 
+      CGContextSetRGBFillColor(border->context,
+                            ((g_inactive_window_color >> 16) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 8) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 0) & 0xff) / 255.f,
+                            ((g_inactive_window_color >> 24) & 0xff) / 255.f );
+    }
+
+    CGContextSetLineWidth(border->context, g_border_width);
     CGContextClearRect(border->context, frame);
-    CGContextAddPath(border->context, path);
-    CGContextStrokePath(border->context);
+
+    if (g_border_style == BORDER_STYLE_SQUARE) {
+      CGRect square_rect = CGRectInset(frame,
+                                       g_border_width / 2.f,
+                                       g_border_width / 2.f );
+
+      CGPathRef square = CGPathCreateWithRect(square_rect, NULL);
+      CGContextAddPath(border->context, square);
+      CGContextFillPath(border->context);
+
+      CGRect clip_rect = CGRectInset(frame,
+                                     2.f*g_border_width,
+                                     2.f*g_border_width );
+
+      CGPathRef clip = CGPathCreateWithRoundedRect(clip_rect,
+                                                   border_radius,
+                                                   border_radius,
+                                                   NULL          );
+
+      CGContextSetBlendMode(border->context, kCGBlendModeDestinationOut);
+      CGContextSetRGBFillColor(border->context, 0.f, 0.f, 0.f, 1.f);
+      CGContextAddPath(border->context, clip);
+      CGContextDrawPath(border->context, kCGPathFillStroke);
+      CGContextSetBlendMode(border->context, kCGBlendModeNormal);
+      CFRelease(clip);
+    } else {
+      CGRect path_rect = CGRectInset(frame, g_border_width, g_border_width);
+      CGPathRef path = CGPathCreateWithRoundedRect(path_rect,
+                                                   border_radius,
+                                                   border_radius,
+                                                   NULL          );
+
+      CGContextAddPath(border->context, path);
+      CGContextStrokePath(border->context);
+      CFRelease(path);
+    }
+  
     CGContextFlush(border->context);
-    CFRelease(path);
   }
 
   CFTypeRef transaction = SLSTransactionCreate(cid);

@@ -2,6 +2,9 @@
 #include "helpers.h"
 #include "hashtable.h"
 
+#define BORDER_STYLE_ROUND  'r'
+#define BORDER_STYLE_SQUARE 's'
+
 struct border {
   bool focused;
   bool needs_redraw;

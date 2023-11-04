@@ -7,6 +7,8 @@ pid_t g_pid;
 uint32_t g_active_window_color = 0xffe1e3e4;
 uint32_t g_inactive_window_color = 0xff494d64;
 float g_border_width = 4.f;
+char g_border_style = BORDER_STYLE_ROUND;
+
 struct table g_windows;
 
 static TABLE_HASH_FUNC(hash_windows)
@@ -58,7 +60,7 @@ void callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
 }
 
 int main(int argc, char** argv) {
-  if (argc == 4) {
+  if (argc >= 4) {
     if (sscanf(argv[1], "active_color=0x%x", &g_active_window_color) != 1) {
       printf("Invalid first argument\n");
       return 1;
@@ -72,6 +74,13 @@ int main(int argc, char** argv) {
     if (sscanf(argv[3], "width=%f", &g_border_width) != 1) {
       printf("Invalid third argument\n");
       return 1;
+    }
+
+    if (argc >= 5) {
+      if (sscanf(argv[4], "style=%c", &g_border_style) != 1) {
+        printf("Invalid fourth argument\n");
+        return 1;
+      }
     }
   } else if (argc > 1) {
     printf("Usage: <binary> <active_color_hex>"

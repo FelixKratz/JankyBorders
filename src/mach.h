@@ -1,15 +1,12 @@
 #pragma once
 #include <mach/mach.h>
 
+#define BS_NAME "git.felix.borders"
+
 struct mach_message {
   mach_msg_header_t header;
   mach_msg_size_t msgh_descriptor_count;
   mach_msg_ool_descriptor_t descriptor;
-};
-
-struct mach_buffer {
-  struct mach_message message;
-  mach_msg_trailer_t trailer;
 };
 
 #define MACH_HANDLER(name) void name(void* message, uint32_t len)

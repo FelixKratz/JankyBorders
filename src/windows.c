@@ -3,21 +3,56 @@
 #include <string.h>
 #include "border.h"
 
-void windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
-  struct border* border = table_find(windows, &wid);
-  if (!border) {
-    border = malloc(sizeof(struct border));
-    border_init(border);
-    table_add(windows, &wid, border);
-  }
+extern pid_t g_pid;
 
-  border->target_wid = wid;
-  border->sid = sid;
-  border->needs_redraw = true;
-  border_draw(border);
+bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
+  bool window_created = false;
+  int cid = SLSMainConnectionID();
+  int wid_cid = 0;
+  SLSGetWindowOwner(cid, wid, &wid_cid);
+
+  pid_t pid = 0;
+  SLSConnectionGetPID(wid_cid, &pid);
+  if (pid == g_pid) return false;
+
+  CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
+                                               sizeof(uint32_t),
+                                               1,
+                                               kCFNumberSInt32Type);
+
+  if (!target_ref) return false;
+
+  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
+  if (query) {
+    CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+    if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
+      if (SLSWindowIteratorAdvance(iterator)) {
+        ITERATOR_WINDOW_SUITABLE(iterator, {
+          struct border* border = table_find(windows, &wid);
+          if (!border) {
+            border = malloc(sizeof(struct border));
+            border_init(border);
+            table_add(windows, &wid, border);
+            window_created = true;
+          }
+
+          border->target_wid = wid;
+          border->sid = sid;
+          border->needs_redraw = true;
+          border_draw(border);
+          windows_update_notifications(windows);
+        });
+      }
+    }
+    if (iterator) CFRelease(iterator);
+    CFRelease(query);
+  }
+  CFRelease(target_ref);
+
+  return window_created;
 }
 
-void windows_window_update_all(struct table* windows) {
+void windows_update_all(struct table* windows) {
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
     while (bucket) {
@@ -33,7 +68,7 @@ void windows_window_update_all(struct table* windows) {
   }
 }
 
-void windows_window_update_active(struct table* windows) {
+void windows_update_active(struct table* windows) {
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
     while (bucket) {
@@ -49,7 +84,7 @@ void windows_window_update_active(struct table* windows) {
   }
 }
 
-void windows_window_update_inactive(struct table* windows) {
+void windows_update_inactive(struct table* windows) {
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
     while (bucket) {
@@ -70,7 +105,8 @@ void windows_window_update(struct table* windows, uint32_t wid) {
   if (border) border_draw(border);
 }
 
-void windows_window_focus(struct table* windows, uint32_t wid) {
+bool windows_window_focus(struct table* windows, uint32_t wid) {
+  bool found_window = false;
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
     while (bucket) {
@@ -87,10 +123,14 @@ void windows_window_focus(struct table* windows, uint32_t wid) {
           border->needs_redraw = true;
           border_draw(border);
         }
+
+        if (border->target_wid == wid) found_window = true;
       }
       bucket = bucket->next;
     }
   }
+
+  return found_window;
 }
 
 void windows_window_move(struct table* windows, uint32_t wid) {
@@ -113,6 +153,7 @@ bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
   if (border && border->sid == sid) {
     table_remove(windows, &wid);
     border_destroy(border);
+    windows_update_notifications(windows);
     return true;
   }
   return false;
@@ -133,9 +174,8 @@ void windows_update_notifications(struct table* windows) {
     }
   }
 
-  SLSRequestNotificationsForWindows(SLSMainConnectionID(),
-                                    window_list,
-                                    window_count          );
+  int cid = SLSMainConnectionID();
+  SLSRequestNotificationsForWindows(cid, window_list, window_count);
 }
 
 void windows_draw_borders_on_current_spaces(struct table* windows) {
@@ -229,7 +269,7 @@ void windows_add_existing_windows(struct table* windows) {
   CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(cid,
                                                                 0,
                                                                 space_list_ref,
-                                                                0x7,
+                                                                0x2,
                                                                 &set_tags,
                                                                 &clear_tags  );
   if (window_list_ref) {

@@ -18,58 +18,33 @@ static void event_watcher(uint32_t event, void* data, size_t data_length, void* 
   dump_event(data, data_length);
 }
 
-static void window_spawn_handler(uint32_t event, void* data, size_t data_length, void* context) {
+struct window_spawn_data {
+  uint64_t sid;
+  uint32_t wid;
+};
+
+static void window_spawn_handler(uint32_t event, struct window_spawn_data* data, size_t _, int cid) {
   struct table* windows = &g_windows;
-  int cid = (intptr_t)context;
-  uint32_t wid = *(uint32_t *)(data + 0x8);
-  uint64_t sid = *(uint64_t *)data;
+  uint32_t wid = data->wid;
+  uint64_t sid = data->sid;
 
   if (!wid || !sid) return;
 
-  int wid_cid = 0;
-  SLSGetWindowOwner(cid, wid, &wid_cid);
-
   if (event == EVENT_WINDOW_CREATE) {
-    pid_t pid = 0;
-    SLSConnectionGetPID(wid_cid, &pid);
-    if (pid == g_pid) return;
-
-    CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
-                                                 sizeof(uint32_t),
-                                                 1,
-                                                 kCFNumberSInt32Type);
-
-    if (!target_ref) return;
-
-    CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
-    if (query) {
-      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-      if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
-        if (SLSWindowIteratorAdvance(iterator)) {
-          ITERATOR_WINDOW_SUITABLE(iterator, {
-            debug("Window Created: %d %d\n", wid, sid);
-            windows_window_create(windows, wid, sid);
-            windows_update_notifications(windows);
-          });
-        }
-      }
-      if (iterator) CFRelease(iterator);
-      CFRelease(query);
+    if (windows_window_create(windows, wid, sid)) {
+      debug("Window Created: %d %d\n", wid, sid);
+      windows_window_focus(windows, get_front_window());
     }
-    CFRelease(target_ref);
   } else if (event == EVENT_WINDOW_DESTROY) {
-    debug("Window Destroyed: %d %d\n", wid, sid);
     if (windows_window_destroy(windows, wid, sid)) {
-      windows_update_notifications(windows);
+      debug("Window Destroyed: %d %d\n", wid, sid);
+      windows_window_focus(windows, get_front_window());
     }
-
-    windows_window_focus(windows, get_front_window());
   }
 }
 
-static void window_modify_handler(uint32_t event, void* data, size_t data_length, void* context) {
-  int cid = (intptr_t)context;
-  uint32_t wid = *(uint32_t *)(data);
+static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _, int cid) {
+  uint32_t wid = *window_id;
   struct table* windows = &g_windows;
 
   if (event == EVENT_WINDOW_MOVE) {
@@ -83,15 +58,31 @@ static void window_modify_handler(uint32_t event, void* data, size_t data_length
     // The update of the front window might not have taken place yet...
     usleep(10000);
 
-    windows_window_focus(windows, get_front_window());
+    uint32_t front_wid = get_front_window();
+    if (!windows_window_focus(windows, front_wid)) {
+      debug("Taking slow window focus path: %d\n", front_wid);
+      if (windows_window_create(windows,
+                                front_wid,
+                                window_space_id(cid, front_wid))) {
+        windows_window_focus(windows, front_wid);
+      }
+    }
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
-    wid = get_front_window();
-    debug("Window Focus: %d\n", wid);
-    windows_window_focus(windows, wid);
+    uint32_t front_wid = get_front_window();
+    debug("Window Focus: %d\n", front_wid);
+    if (!windows_window_focus(windows, front_wid)) {
+      debug("Taking slow window focus path: %d\n", front_wid);
+      if (windows_window_create(windows,
+                                front_wid,
+                                window_space_id(cid, front_wid))) {
+
+        windows_window_focus(windows, front_wid);
+      }
+    }
   } else if (event == EVENT_WINDOW_UNHIDE) {
     debug("Window Unhide: %d\n", wid);
     windows_window_unhide(windows, wid);
@@ -105,8 +96,7 @@ static void space_handler(uint32_t event, void* data, size_t data_length, void* 
   windows_draw_borders_on_current_spaces(&g_windows);
 }
 
-void events_register() {
-  int cid = SLSMainConnectionID();
+void events_register(int cid) {
   void* cid_ctx = (void*)(intptr_t)cid;
 
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_MOVE, cid_ctx);

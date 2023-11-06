@@ -15,19 +15,19 @@ void border_destroy(struct border* border) {
 
 void border_move(struct border* border) {
   int cid = SLSMainConnectionID();
-  CFTypeRef transaction = SLSTransactionCreate(cid);
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
   CGRect frame = CGRectInset(window_frame,
                              -g_settings.border_width,
                              -g_settings.border_width );
+
+  CFTypeRef transaction = SLSTransactionCreate(cid);
   SLSTransactionMoveWindowWithGroup(transaction, border->wid, frame.origin);
-
   SLSTransactionCommit(transaction, true);
-  border->origin = window_frame.origin;
-
   CFRelease(transaction);
+
+  border->origin = window_frame.origin;
 }
 
 void border_draw(struct border* border) {
@@ -38,13 +38,10 @@ void border_draw(struct border* border) {
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
-  if (!shown && border->wid) {
-    SLSReleaseWindow(cid, border->wid);
-    border->wid = 0;
-    CGContextRelease(border->context);
-    border->context = NULL;
-  }
-  if (!shown) return;
+  if (!shown) {
+    if (border->wid) SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+    return;
+  } 
 
   int level = window_level(cid, border->target_wid);
   int sub_level = 0;
@@ -55,6 +52,11 @@ void border_draw(struct border* border) {
   CGRect frame = CGRectInset(window_frame,
                              -g_settings.border_width,
                              -g_settings.border_width );
+
+  if (frame.size.width < 2.f * border_radius
+      || frame.size.height < 2.f * border_radius) {
+    return;
+  }
 
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
@@ -177,5 +179,7 @@ void border_hide(struct border* border) {
 }
 
 void border_unhide(struct border* border) {
-  border_draw(border);
+  int cid = SLSMainConnectionID();
+  if (border->wid) SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+  else border_draw(border);
 }

@@ -16,4 +16,4 @@
 
 #define EVENT_SPACE_CHANGE   1401
 
-void events_register();
+void events_register(int cid);

@@ -94,7 +94,7 @@ bool mach_server_begin(struct mach_server* mach_server, mach_handler handler) {
   }
 
   if (bootstrap_register(mach_server->bs_port,
-                         "git.felix.borders",
+                         BS_NAME,
                          mach_server->port    ) != KERN_SUCCESS) {
     return false;
   }

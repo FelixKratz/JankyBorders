@@ -33,13 +33,13 @@ static void window_spawn_handler(uint32_t event, struct window_spawn_data* data,
   if (event == EVENT_WINDOW_CREATE) {
     if (windows_window_create(windows, wid, sid)) {
       debug("Window Created: %d %d\n", wid, sid);
-      windows_window_focus(windows, get_front_window());
     }
+    windows_window_focus(windows, get_front_window());
   } else if (event == EVENT_WINDOW_DESTROY) {
     if (windows_window_destroy(windows, wid, sid)) {
       debug("Window Destroyed: %d %d\n", wid, sid);
-      windows_window_focus(windows, get_front_window());
     }
+    windows_window_focus(windows, get_front_window());
   }
 }
 

@@ -51,19 +51,15 @@ static inline uint32_t get_front_window() {
 
   uint32_t wid = 0;
   if (window_list) {
-    uint32_t window_count = CFArrayGetCount(window_list);
-    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
-    if (query) {
-      CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-      if (iterator && SLSWindowIteratorAdvance(iterator)) {
-        wid = SLSWindowIteratorGetWindowID(iterator);
-        CFRelease(iterator);
-      }
-      CFRelease(query);
+    if (CFArrayGetCount(window_list) > 0) {
+      CFNumberRef wid_ref = (CFNumberRef)CFArrayGetValueAtIndex(window_list,
+                                                                0           );
+
+      CFNumberGetValue(wid_ref, kCFNumberSInt32Type, &wid);
+      CFRelease(wid_ref);
     }
     CFRelease(window_list);
   }
-
   CFRelease(space_list_ref);
   return wid;
 }

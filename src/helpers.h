@@ -1,4 +1,5 @@
 #include "extern.h"
+#include "ApplicationServices/ApplicationServices.h"
 
 static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int count, CFNumberType type) {
   CFNumberRef temp[count];
@@ -17,28 +18,46 @@ static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int co
   return result;
 }
 
+static inline uint64_t get_active_space_id(int cid) {
+  uint32_t count;
+  CGGetActiveDisplayList(0, NULL, &count);
+
+  CFStringRef uuid_ref;
+  if (count == 1) {
+    uint32_t did = 0;
+    uint32_t count = 0;
+    CGGetActiveDisplayList(1, &did, &count);
+    if (count == 1) {
+      CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(did);
+      uuid_ref = CFUUIDCreateString(NULL, uuid);
+      CFRelease(uuid);
+    }
+    else {
+      printf("[!] ERROR (id): No active display detected!\n");
+      return 0;
+    }
+  } else {
+    uuid_ref = SLSCopyActiveMenuBarDisplayIdentifier(cid);
+  }
+
+  uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid_ref);
+  CFRelease(uuid_ref);
+  return sid;
+}
+
 static inline uint32_t get_front_window() {
   int cid = SLSMainConnectionID();
+
+  uint64_t active_sid = get_active_space_id(cid);
+  CFArrayRef space_list_ref = cfarray_of_cfnumbers(&active_sid,
+                                                   sizeof(uint64_t),
+                                                   1,
+                                                   kCFNumberSInt64Type);
+
   ProcessSerialNumber psn;
   _SLPSGetFrontProcess(&psn);
   int target_cid;
   SLSGetConnectionIDForPSN(cid, &psn, &target_cid);
-
-  CFArrayRef displays = SLSCopyManagedDisplays(cid);
-  uint32_t space_count = CFArrayGetCount(displays);
-  uint64_t space_list[space_count];
-
-  for (int i = 0; i < space_count; i++) {
-    space_list[i] = SLSManagedDisplayGetCurrentSpace(cid,
-                             (CFStringRef)CFArrayGetValueAtIndex(displays, i));
-  }
-
-  CFRelease(displays);
-
-  CFArrayRef space_list_ref = cfarray_of_cfnumbers(space_list,
-                                                   sizeof(uint64_t),
-                                                   space_count,
-                                                   kCFNumberSInt64Type);
 
   uint64_t set_tags = 1;
   uint64_t clear_tags = 0;

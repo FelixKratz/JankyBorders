@@ -96,7 +96,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 
 static void space_handler(uint32_t event, void* data, size_t data_length, void* context) {
   // Not all native-fullscreen windows have yet updated their space id...
-  usleep(10000);
+  usleep(20000);
 
   windows_draw_borders_on_current_spaces(&g_windows);
 }

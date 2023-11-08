@@ -1,4 +1,7 @@
 # JankyBorders
+
+<img align="right" width="50%" src="images/screenshot.png" alt="Screenshot">
+
 This small project adds colored borders to all user windows on macOS Sonoma and
 later. It can be used to better identify the currently focused window. It does
 not use the accessibility API and should thus be faster than comparable tools.

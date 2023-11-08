@@ -1,6 +1,23 @@
 #include "extern.h"
 #include "ApplicationServices/ApplicationServices.h"
 
+static inline void debug(const char* message, ...) {
+#ifdef DEBUG
+  va_list va;
+  va_start(va, message);
+  vprintf(message, va);
+  va_end(va);
+#endif
+}
+
+static inline void error(const char* message, ...) {
+  va_list va;
+  va_start(va, message);
+  vfprintf(stderr, message, va);
+  va_end(va);
+  exit(EXIT_FAILURE);
+}
+
 static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int count, CFNumberType type) {
   CFNumberRef temp[count];
 
@@ -45,10 +62,9 @@ static inline uint64_t get_active_space_id(int cid) {
   return sid;
 }
 
-static inline uint32_t get_front_window() {
-  int cid = SLSMainConnectionID();
-
+static inline uint32_t get_front_window(int cid) {
   uint64_t active_sid = get_active_space_id(cid);
+  debug("Active space id: %d\n", active_sid);
   CFArrayRef space_list_ref = cfarray_of_cfnumbers(&active_sid,
                                                    sizeof(uint64_t),
                                                    1,
@@ -76,6 +92,8 @@ static inline uint32_t get_front_window() {
 
       CFNumberGetValue(wid_ref, kCFNumberSInt32Type, &wid);
       CFRelease(wid_ref);
+    } else {
+      debug("Empty window list\n");
     }
     CFRelease(window_list);
   }
@@ -159,21 +177,4 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
 
   SLSMoveWindowsToManagedSpace(cid, window_list, sid);
   CFRelease(window_list);
-}
-
-static inline void debug(const char* message, ...) {
-#ifdef DEBUG
-  va_list va;
-  va_start(va, message);
-  vprintf(message, va);
-  va_end(va);
-#endif
-}
-
-static inline void error(const char* message, ...) {
-  va_list va;
-  va_start(va, message);
-  vfprintf(stderr, message, va);
-  va_end(va);
-  exit(EXIT_FAILURE);
 }

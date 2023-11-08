@@ -179,6 +179,7 @@ void windows_update_notifications(struct table* windows) {
 }
 
 void windows_draw_borders_on_current_spaces(struct table* windows) {
+  debug("Space Change: Consistency check\n");
   int cid = SLSMainConnectionID();
   CFArrayRef displays = SLSCopyManagedDisplays(cid);
   uint32_t space_count = CFArrayGetCount(displays);
@@ -216,6 +217,10 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
             struct border* border = table_find(windows, &wid);
             if (border) border_draw(border);
+            else {
+              debug("Creating Missing Window: %d\n", wid);
+              windows_window_create(windows, wid, window_space_id(cid, wid));
+            }
           });
         }
       }

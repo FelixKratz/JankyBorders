@@ -34,12 +34,12 @@ static void window_spawn_handler(uint32_t event, struct window_spawn_data* data,
     if (windows_window_create(windows, wid, sid)) {
       debug("Window Created: %d %d\n", wid, sid);
     }
-    windows_window_focus(windows, get_front_window());
+    windows_window_focus(windows, get_front_window(cid));
   } else if (event == EVENT_WINDOW_DESTROY) {
     if (windows_window_destroy(windows, wid, sid)) {
       debug("Window Destroyed: %d %d\n", wid, sid);
     }
-    windows_window_focus(windows, get_front_window());
+    windows_window_focus(windows, get_front_window(cid));
   }
 }
 
@@ -58,12 +58,12 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     // The update of the front window might not have taken place yet...
     usleep(10000);
 
-    uint32_t front_wid = get_front_window();
+    uint32_t front_wid = get_front_window(cid);
     if (!windows_window_focus(windows, front_wid)) {
       debug("Taking slow window focus path: %d\n", front_wid);
-      if (windows_window_create(windows,
-                                front_wid,
-                                window_space_id(cid, front_wid))) {
+      if (front_wid &&windows_window_create(windows,
+                                            front_wid,
+                                            window_space_id(cid, front_wid))) {
         windows_window_focus(windows, front_wid);
       }
     }
@@ -71,14 +71,16 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);
-  } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
-    uint32_t front_wid = get_front_window();
+  } else if (event == EVENT_WINDOW_TITLE
+            || event == EVENT_WINDOW_UPDATE) {
+    uint32_t front_wid = get_front_window(cid);
     debug("Window Focus: %d\n", front_wid);
     if (!windows_window_focus(windows, front_wid)) {
+      if (!front_wid) return;
       debug("Taking slow window focus path: %d\n", front_wid);
-      if (windows_window_create(windows,
-                                front_wid,
-                                window_space_id(cid, front_wid))) {
+      if (front_wid && windows_window_create(windows,
+                                             front_wid,
+                                             window_space_id(cid, front_wid))) {
 
         windows_window_focus(windows, front_wid);
       }
@@ -93,6 +95,9 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 }
 
 static void space_handler(uint32_t event, void* data, size_t data_length, void* context) {
+  // Not all native-fullscreen windows have yet updated their space id...
+  usleep(10000);
+
   windows_draw_borders_on_current_spaces(&g_windows);
 }
 

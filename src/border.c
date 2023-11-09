@@ -31,7 +31,8 @@ void border_move(struct border* border) {
 }
 
 void border_draw(struct border* border) {
-  float border_radius = 9.f;
+  static const float border_radius = 9.f;
+  static const float inner_border_radius = 11.f;
 
   int cid = SLSMainConnectionID();
   if (!is_space_visible(cid, border->sid)) return;
@@ -43,18 +44,14 @@ void border_draw(struct border* border) {
     return;
   } 
 
-  int level = window_level(cid, border->target_wid);
-  int sub_level = 0;
-  SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
-
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
   CGRect frame = CGRectInset(window_frame,
                              -g_settings.border_width,
                              -g_settings.border_width );
 
-  if (frame.size.width < 2.f * border_radius
-      || frame.size.height < 2.f * border_radius) {
+  if (frame.size.width < 2.f * inner_border_radius
+      || frame.size.height < 2.f * inner_border_radius) {
     return;
   }
 
@@ -105,6 +102,10 @@ void border_draw(struct border* border) {
     CFRelease(frame_region);
   }
 
+  int level = window_level(cid, border->target_wid);
+  int sub_level = 0;
+  SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
+
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
   SLSOrderWindow(cid, border->wid, -1, border->target_wid);
@@ -124,44 +125,46 @@ void border_draw(struct border* border) {
     CGContextSetRGBFillColor(border->context, r, g, b, a);
     CGContextSetLineWidth(border->context, g_settings.border_width);
     CGContextClearRect(border->context, frame);
+    CGContextSaveGState(border->context);
+
+    CGRect path_rect = CGRectInset(frame,
+                                   g_settings.border_width,
+                                   g_settings.border_width );
+
+    CGMutablePathRef clip_path = CGPathCreateMutable();
+    CGPathAddRect(clip_path, NULL, frame);
+    CGPathAddRoundedRect(clip_path,
+                         NULL,
+                         path_rect,
+                         inner_border_radius,
+                         inner_border_radius );
+
+    CGContextAddPath(border->context, clip_path);
+    CGContextEOClip(border->context);
 
     if (g_settings.border_style == BORDER_STYLE_SQUARE) {
-      CGRect square_rect = CGRectInset(frame,
-                                       g_settings.border_width / 2.f,
-                                       g_settings.border_width / 2.f );
+      CGRect square_rect = CGRectInset(path_rect,
+                                       -g_settings.border_width / 2.f,
+                                       -g_settings.border_width / 2.f );
 
-      CGPathRef square = CGPathCreateWithRect(square_rect, NULL);
-      CGContextAddPath(border->context, square);
+      CGPathRef square_path = CGPathCreateWithRect(square_rect, NULL);
+      CGContextAddPath(border->context, square_path);
       CGContextFillPath(border->context);
-
-      CGRect clip_rect = CGRectInset(frame,
-                                     2.f*g_settings.border_width,
-                                     2.f*g_settings.border_width );
-
-      CGPathRef clip = CGPathCreateWithRoundedRect(clip_rect,
-                                                   border_radius,
-                                                   border_radius,
-                                                   NULL          );
-
-      CGContextSetBlendMode(border->context, kCGBlendModeDestinationOut);
-      CGContextSetRGBFillColor(border->context, 0.f, 0.f, 0.f, 1.f);
-      CGContextAddPath(border->context, clip);
-      CGContextDrawPath(border->context, kCGPathFillStroke);
-      CGContextSetBlendMode(border->context, kCGBlendModeNormal);
-      CFRelease(clip);
+      CFRelease(square_path);
     } else {
-      CGRect path_rect = CGRectInset(frame, g_settings.border_width, g_settings.border_width);
-      CGPathRef path = CGPathCreateWithRoundedRect(path_rect,
-                                                   border_radius,
-                                                   border_radius,
-                                                   NULL          );
+      CGPathRef stroke_path = CGPathCreateWithRoundedRect(path_rect,
+                                                          border_radius,
+                                                          border_radius,
+                                                          NULL          );
 
-      CGContextAddPath(border->context, path);
+      CGContextAddPath(border->context, stroke_path);
       CGContextStrokePath(border->context);
-      CFRelease(path);
+      CFRelease(stroke_path);
     }
+    CFRelease(clip_path);
   
     CGContextFlush(border->context);
+    CGContextRestoreGState(border->context);
   }
 
   CFTypeRef transaction = SLSTransactionCreate(cid);

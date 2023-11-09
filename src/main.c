@@ -40,21 +40,17 @@ static uint32_t parse_settings(struct settings* settings, int count, char** argu
                "active_color=0x%x",
                &settings->active_window_color) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ACTIVE;
-      continue;
     }
     else if (sscanf(arguments[i],
              "inactive_color=0x%x",
              &settings->inactive_window_color) == 1) {
       update_mask |= BORDER_UPDATE_MASK_INACTIVE;
-      continue;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;
-      continue;
     }
     else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;
-      continue;
     } else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
     }

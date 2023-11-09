@@ -135,9 +135,9 @@ void border_draw(struct border* border) {
     CGPathAddRect(clip_path, NULL, frame);
     CGPathAddRoundedRect(clip_path,
                          NULL,
-                         path_rect,
+                         CGRectInset(path_rect, 1.0, 1.0),
                          inner_border_radius,
-                         inner_border_radius );
+                         inner_border_radius              );
 
     CGContextAddPath(border->context, clip_path);
     CGContextEOClip(border->context);

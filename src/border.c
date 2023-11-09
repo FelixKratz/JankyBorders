@@ -32,7 +32,7 @@ void border_move(struct border* border) {
 
 void border_draw(struct border* border) {
   static const float border_radius = 9.f;
-  static const float inner_border_radius = 11.f;
+  static const float inner_border_radius = 12.f;
 
   int cid = SLSMainConnectionID();
   if (!is_space_visible(cid, border->sid)) return;

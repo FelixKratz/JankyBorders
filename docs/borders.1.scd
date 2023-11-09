@@ -20,7 +20,7 @@ JankyBorders - A window border system for macOS
 	Specify the border color of all windows which are not currently focused.
 
 *width=<float>*
-	Specify the border color of all windows which are not currently focused.
+	Specify the border width.
 
 If an instance of *borders* is already running, another invocation will send
 the arguments to the already running process and update them accordingly.

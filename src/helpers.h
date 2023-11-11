@@ -185,8 +185,11 @@ static inline int window_level(int cid, uint32_t wid) {
 
   CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
   CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
-  int level = SLSWindowIteratorGetLevel(iterator, 0);
-  CFRelease(iterator);
+  int level = 0;
+  if (iterator && SLSWindowIteratorAdvance(iterator)) {
+    level = SLSWindowIteratorGetLevel(iterator);
+    CFRelease(iterator);
+  }
   CFRelease(query);
   CFRelease(target_ref);
 

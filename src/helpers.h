@@ -1,6 +1,20 @@
 #include "extern.h"
 #include "ApplicationServices/ApplicationServices.h"
 
+#define ITERATOR_WINDOW_SUITABLE(iterator, code) { \
+  uint64_t tags = SLSWindowIteratorGetTags(iterator); \
+  uint64_t attributes = SLSWindowIteratorGetAttributes(iterator); \
+  uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator); \
+  if (((parent_wid == 0) \
+        && ((attributes & 0x2) \
+          || (tags & 0x400000000000000)) \
+        && (((tags & 0x1)) \
+          || ((tags & 0x2) \
+            && (tags & 0x80000000))))) { \
+    code \
+  } \
+}
+
 static inline void debug(const char* message, ...) {
 #ifdef DEBUG
   va_list va;
@@ -86,12 +100,22 @@ static inline uint32_t get_front_window(int cid) {
 
   uint32_t wid = 0;
   if (window_list) {
-    if (CFArrayGetCount(window_list) > 0) {
-      CFNumberRef wid_ref = (CFNumberRef)CFArrayGetValueAtIndex(window_list,
-                                                                0           );
-
-      CFNumberGetValue(wid_ref, kCFNumberSInt32Type, &wid);
-      CFRelease(wid_ref);
+    uint32_t window_count = CFArrayGetCount(window_list);
+    if (window_count > 0) {
+      CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
+      if (query) {
+        CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+        if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
+          while (SLSWindowIteratorAdvance(iterator)) {
+            ITERATOR_WINDOW_SUITABLE(iterator, {
+                wid = SLSWindowIteratorGetWindowID(iterator);
+                break;
+            });
+          }
+        }
+        if (iterator) CFRelease(iterator);
+        CFRelease(query);
+      }
     } else {
       debug("Empty window list\n");
     }

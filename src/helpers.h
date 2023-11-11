@@ -188,8 +188,9 @@ static inline int window_level(int cid, uint32_t wid) {
   int level = 0;
   if (iterator && SLSWindowIteratorAdvance(iterator)) {
     level = SLSWindowIteratorGetLevel(iterator);
-    CFRelease(iterator);
   }
+  if (iterator) CFRelease(iterator);
+
   CFRelease(query);
   CFRelease(target_ref);
 

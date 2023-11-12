@@ -46,7 +46,7 @@ extern CGError SLSGetConnectionIDForPSN(int cid, ProcessSerialNumber *psn, int *
 
 extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces, uint32_t options, uint64_t *set_tags, uint64_t *clear_tags);
 
-extern CFTypeRef SLSWindowQueryWindows(int cid, CFArrayRef windows, int count);
+extern CFTypeRef SLSWindowQueryWindows(int cid, CFArrayRef windows, uint32_t options);
 extern CFTypeRef SLSWindowQueryResultCopyWindows(CFTypeRef window_query);
 extern int SLSWindowIteratorGetCount(CFTypeRef iterator);
 extern bool SLSWindowIteratorAdvance(CFTypeRef iterator);

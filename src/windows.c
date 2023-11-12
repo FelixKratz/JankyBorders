@@ -22,7 +22,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
   if (!target_ref) return false;
 
-  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
+  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 0x0);
   if (query) {
     CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
     if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
@@ -208,7 +208,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
 
   if (window_list) {
     uint32_t window_count = CFArrayGetCount(window_list);
-    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
+    CFTypeRef query = SLSWindowQueryWindows(cid, window_list, 0x0);
     if (query) {
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
       if (iterator) {
@@ -280,7 +280,7 @@ void windows_add_existing_windows(struct table* windows) {
   if (window_list_ref) {
     int count = CFArrayGetCount(window_list_ref);
     if (count > 0) {
-      CFTypeRef query = SLSWindowQueryWindows(cid, window_list_ref, count);
+      CFTypeRef query = SLSWindowQueryWindows(cid, window_list_ref, 0x0);
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
 
       while (SLSWindowIteratorAdvance(iterator)) {

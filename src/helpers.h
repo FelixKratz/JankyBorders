@@ -102,7 +102,7 @@ static inline uint32_t get_front_window(int cid) {
   if (window_list) {
     uint32_t window_count = CFArrayGetCount(window_list);
     if (window_count > 0) {
-      CFTypeRef query = SLSWindowQueryWindows(cid, window_list, window_count);
+      CFTypeRef query = SLSWindowQueryWindows(cid, window_list, 0x0);
       if (query) {
         CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
         if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
@@ -183,7 +183,7 @@ static inline int window_level(int cid, uint32_t wid) {
                                                1,
                                                kCFNumberSInt32Type );
 
-  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 1);
+  CFTypeRef query = SLSWindowQueryWindows(cid, target_ref, 0x0);
   CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
   int level = 0;
   if (iterator && SLSWindowIteratorAdvance(iterator)) {

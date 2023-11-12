@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2023-11-09"
+.TH "borders" "1" "2023-11-12"
 .P
 .SH NAME
 .P
@@ -13,32 +13,41 @@ JankyBorders - A window border system for macOS
 .P
 .SH SYNOPSIS
 .P
-\fBborders\fR
+\fBborders [options]\fR
+.P
+.SH DESCRIPTION
+.P
+\fBJankyBorders\fR is a lightweight tool designed to add colored borders to user
+windows on macOS 14.\&0+.\& It enhances the user experience by visually highlighting
+the currently focused window without relying on the accessibility API, thereby
+ensuring performance and responsiveness.\&
 .P
 .SH OPTIONS
 .P
 \fBstyle=<style>\fR
 .RS 4
-Specify the border style.\&
+Specifies the style of the border (either \fIround\fR or \fIsquare\fR)
 .P
 .RE
 \fBactive_color=<color>\fR
 .RS 4
-Specify the border color of the window which is currently focused.\&
+Sets the border color for the focused window (format: \fI0xAARRGGBB\fR).\& For
+instance, active_color=0xff00ff00 creates a green border.\&
 .P
 .RE
 \fBinactive_color=<color>\fR
 .RS 4
-Specify the border color of all windows which are not currently focused.\&
+Sets the border color for all windows not in focus.\&
 .P
 .RE
 \fBwidth=<float>\fR
 .RS 4
-Specify the border width.\&
+Determines the width of the border.\& For example, width=5.\&0 creates a border
+5.\&0 points wide.\&
 .P
 .RE
-If an instance of \fBborders\fR is already running, another invocation will send
-the arguments to the already running process and update them accordingly.\&
+If an instance of \fBborders\fR is already running, subsequent invocations will
+update the existing process with the new arguments.\&
 .P
 .SH NOMENCLATURE
 .P
@@ -51,23 +60,14 @@ Either \fIround\fR or \fIsquare\fR.\&
 .RS 4
 A color formatted as \fI0xAARRGGBB\fR, where \fIA\fR is the alpha channel, \fIR\fR the
 red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All constituents
-take a base 16 number, i.\&e.\& \fI0-F\fR.\& 
-.br
-	E.\&g.\& active_color=0xff00ff00 creates a green border.\&
+take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .P
 .RE
 \fB<float>\fR
 .RS 4
-A floating point number
-E.\&g.\& width=5.\&0 creates a 5.\&0 points wide border.\&
+A floating point number.\&
 .P
 .RE
-.SH DESCRIPTION
-.P
-This small project adds colored borders to all user windows on macOS Sonoma and
-later.\& It can be used to better identify the currently focused window.\& It does
-not use the accessibility API and should thus be faster than comparable tools.\&
-.P
 .SH BUGS
 .P
 Report them at https://github.\&com/FelixKratz/JankyBorders/issues.\&

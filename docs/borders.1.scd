@@ -6,24 +6,33 @@ JankyBorders - A window border system for macOS
 
 # SYNOPSIS
 
-*borders*
+*borders [options]*
+
+# DESCRIPTION
+
+*JankyBorders* is a lightweight tool designed to add colored borders to user
+windows on macOS 14.0+. It enhances the user experience by visually highlighting
+the currently focused window without relying on the accessibility API, thereby
+ensuring performance and responsiveness.
 
 # OPTIONS
 
 *style=<style>*
-	Specify the border style.
+	Specifies the style of the border (either _round_ or _square_)
 
 *active_color=<color>*
-	Specify the border color of the window which is currently focused.
+	Sets the border color for the focused window (format: _0xAARRGGBB_). For
+	instance, active_color=0xff00ff00 creates a green border.
 
 *inactive_color=<color>*
-	Specify the border color of all windows which are not currently focused.
+	Sets the border color for all windows not in focus.
 
 *width=<float>*
-	Specify the border width.
+	Determines the width of the border. For example, width=5.0 creates a border
+	5.0 points wide.
 
-If an instance of *borders* is already running, another invocation will send
-the arguments to the already running process and update them accordingly.
+If an instance of *borders* is already running, subsequent invocations will
+update the existing process with the new arguments.
 
 # NOMENCLATURE
 
@@ -33,18 +42,10 @@ the arguments to the already running process and update them accordingly.
 *<color>*
 	A color formatted as _0xAARRGGBB_, where _A_ is the alpha channel, _R_ the
 	red channel, _G_ the green channel and _B_ the blue channel. All constituents
-	take a base 16 number, i.e. _0-F_. ++
-	E.g. active_color=0xff00ff00 creates a green border.
+	take a base 16 number, i.e. _0-F_.
 
 *<float>*
-	A floating point number
-	E.g. width=5.0 creates a 5.0 points wide border.
-
-# DESCRIPTION
-
-This small project adds colored borders to all user windows on macOS Sonoma and
-later. It can be used to better identify the currently focused window. It does
-not use the accessibility API and should thus be faster than comparable tools.
+	A floating point number.
 
 # BUGS
 

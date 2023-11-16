@@ -50,8 +50,9 @@ void border_draw(struct border* border) {
                              -g_settings.border_width,
                              -g_settings.border_width );
 
-  if (frame.size.width < 2.f * inner_border_radius
-      || frame.size.height < 2.f * inner_border_radius) {
+  CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
+  if (smallest_rect.size.width < 2.f * inner_border_radius
+      || smallest_rect.size.height < 2.f * inner_border_radius) {
     return;
   }
 

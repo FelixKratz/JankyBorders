@@ -4,7 +4,7 @@ LIBS = -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLigh
 all: | bin
 	clang -std=c99 -O3 -g $(FILES) -o bin/borders $(LIBS)
 
-debug:
+debug: | bin
 	clang -std=c99 -O0 -g -DDEBUG $(FILES) -o bin/debug $(LIBS)
 
 bin:

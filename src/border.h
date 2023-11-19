@@ -21,6 +21,7 @@ struct settings {
 struct border {
   bool focused;
   bool needs_redraw;
+  bool disable;
 
   CGRect bounds;
   CGPoint origin;

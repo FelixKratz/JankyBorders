@@ -53,8 +53,11 @@ void border_draw(struct border* border) {
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
       || smallest_rect.size.height < 2.f * inner_border_radius) {
+    border->disable = true;
+    border_hide(border);
     return;
   }
+  border->disable = false;
 
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
@@ -183,6 +186,8 @@ void border_hide(struct border* border) {
 }
 
 void border_unhide(struct border* border) {
+  if (border->disable) return;
+
   int cid = SLSMainConnectionID();
   if (border->wid) SLSOrderWindow(cid, border->wid, -1, border->target_wid);
   else border_draw(border);

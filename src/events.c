@@ -61,9 +61,10 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     uint32_t front_wid = get_front_window(cid);
     if (!windows_window_focus(windows, front_wid)) {
       debug("Taking slow window focus path: %d\n", front_wid);
-      if (front_wid &&windows_window_create(windows,
-                                            front_wid,
-                                            window_space_id(cid, front_wid))) {
+      if (front_wid
+          && windows_window_create(windows,
+                                   front_wid,
+                                   window_space_id(cid, front_wid))) {
         windows_window_focus(windows, front_wid);
       }
     }
@@ -78,10 +79,10 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     if (!windows_window_focus(windows, front_wid)) {
       if (!front_wid) return;
       debug("Taking slow window focus path: %d\n", front_wid);
-      if (front_wid && windows_window_create(windows,
-                                             front_wid,
-                                             window_space_id(cid, front_wid))) {
-
+      if (front_wid
+          && windows_window_create(windows,
+                                   front_wid,
+                                   window_space_id(cid, front_wid))) {
         windows_window_focus(windows, front_wid);
       }
     }
@@ -97,7 +98,6 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 static void space_handler(uint32_t event, void* data, size_t data_length, void* context) {
   // Not all native-fullscreen windows have yet updated their space id...
   usleep(20000);
-
   windows_draw_borders_on_current_spaces(&g_windows);
 }
 

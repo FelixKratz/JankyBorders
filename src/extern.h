@@ -29,15 +29,10 @@ extern CGError SLSSetWindowSubLevel(int cid, uint32_t wid, int level);
 extern CGError SLSGetWindowLevel(int cid, uint32_t wid, int* out_level);
 extern CGError SLSGetWindowSubLevel(int cid, uint32_t wid, int* out_level);
 extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
+extern CGError SLSMoveWindow(int cid, uint32_t wid, CGPoint* point);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
 extern CFTypeRef SLSTransactionCreate(int cid);
 extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
-extern CGError SLSTransactionOrderWindow(CFTypeRef transaction, uint32_t wid, int mode, uint32_t relativeToWID);
-extern CGError SLSTransactionSetWindowLevel(CFTypeRef transaction, uint32_t wid, int level);
-extern CGError SLSTransactionSetWindowShape(CFTypeRef transaction, uint32_t wid, float x_offset, float y_offset, CFTypeRef shape);
-extern CGError SLSTransactionMoveWindowWithGroup(CFTypeRef transaction, uint32_t wid, CGPoint point);
-extern CGError SLSTransactionCommitUsingMethod(CFTypeRef transaction, uint32_t method);
-extern CGError SLSTransactionCommit(CFTypeRef transaction, uint32_t async);
 extern CGError SLSDisableUpdate(int cid);
 extern CGError SLSReenableUpdate(int cid);
 

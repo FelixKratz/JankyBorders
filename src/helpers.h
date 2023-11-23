@@ -206,3 +206,28 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
   SLSMoveWindowsToManagedSpace(cid, window_list, sid);
   CFRelease(window_list);
 }
+
+static inline uint32_t window_create(int cid, CGRect frame) {
+  uint64_t id;
+  CFTypeRef frame_region;
+
+  CGSNewRegionWithRect(&frame, &frame_region);
+  SLSNewWindow(cid,
+               kCGBackingStoreBuffered,
+               -9999,
+               -9999,
+               frame_region,
+               &id                     );
+  CFRelease(frame_region);
+
+  uint32_t wid = id;
+  uint64_t set_tags = 1ULL << 1;
+  uint64_t clear_tags = 0;
+
+  SLSSetWindowResolution(cid, wid, 1.0f);
+  SLSSetWindowTags(cid, wid, &set_tags, 64);
+  SLSClearWindowTags(cid, wid, &clear_tags, 64);
+  SLSSetWindowOpacity(cid, wid, 0);
+
+  return wid;
+}

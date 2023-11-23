@@ -22,12 +22,7 @@ void border_move(struct border* border) {
                              -g_settings.border_width,
                              -g_settings.border_width );
 
-  CFTypeRef transaction = SLSTransactionCreate(cid);
-  SLSTransactionMoveWindowWithGroup(transaction, border->wid, frame.origin);
-  SLSTransactionCommit(transaction, true);
-  CFRelease(transaction);
-
-  border->origin = window_frame.origin;
+  SLSMoveWindow(cid, border->wid, &frame.origin);
 }
 
 void border_draw(struct border* border) {
@@ -40,16 +35,12 @@ void border_draw(struct border* border) {
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
   if (!shown) {
-    if (border->wid) SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+    border_hide(border);
     return;
   } 
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-  CGRect frame = CGRectInset(window_frame,
-                             -g_settings.border_width,
-                             -g_settings.border_width );
-
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
       || smallest_rect.size.height < 2.f * inner_border_radius) {
@@ -59,38 +50,19 @@ void border_draw(struct border* border) {
   }
   border->disable = false;
 
+  CGRect frame = CGRectInset(window_frame,
+                             -g_settings.border_width,
+                             -g_settings.border_width );
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
 
   SLSDisableUpdate(cid);
   if (!border->wid) {
-    CFTypeRef frame_region;
-    CGSNewRegionWithRect(&frame, &frame_region);
-
-    uint64_t set_tags = 1ULL <<  1;
-    uint64_t clear_tags = 0;
-
-    uint64_t id;
-    SLSNewWindow(cid,
-                 kCGBackingStoreBuffered,
-                 -9999,
-                 -9999,
-                 frame_region,
-                 &id                     );
-
-    border->wid = (uint32_t)id;
-
-    SLSSetWindowResolution(cid, border->wid, 1.0f);
-    SLSSetWindowTags(cid, border->wid, &set_tags, 64);
-    SLSClearWindowTags(cid, border->wid, &clear_tags, 64);
-    SLSSetWindowOpacity(cid, border->wid, 0);
-
+    border->wid = window_create(cid, frame);
+    border->bounds = frame;
+    border->needs_redraw = true;
     border->context = SLWindowContextCreate(cid, border->wid, NULL);
     CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
-    border->bounds = frame;
-    border->origin = origin;
-    border->needs_redraw = true;
-    CFRelease(frame_region);
 
     if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
     window_send_to_space(cid, border->wid, border->sid);
@@ -99,20 +71,16 @@ void border_draw(struct border* border) {
   if (!CGRectEqualToRect(frame, border->bounds)) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
-
-    border->bounds = frame;
     SLSSetWindowShape(cid, border->wid, -9999, -9999, frame_region);
-    border->needs_redraw = true;
     CFRelease(frame_region);
+
+    border->needs_redraw = true;
+    border->bounds = frame;
   }
 
   int level = window_level(cid, border->target_wid);
   int sub_level = 0;
   SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
-
-  SLSSetWindowLevel(cid, border->wid, level);
-  SLSSetWindowSubLevel(cid, border->wid, sub_level);
-  SLSOrderWindow(cid, border->wid, -1, border->target_wid);
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
@@ -171,24 +139,23 @@ void border_draw(struct border* border) {
     CGContextRestoreGState(border->context);
   }
 
-  CFTypeRef transaction = SLSTransactionCreate(cid);
-  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
-  SLSTransactionCommit(transaction, true);
-  CFRelease(transaction);
+  SLSMoveWindow(cid, border->wid, &origin);
+  SLSSetWindowLevel(cid, border->wid, level);
+  SLSSetWindowSubLevel(cid, border->wid, sub_level);
+  SLSOrderWindow(cid, border->wid, -1, border->target_wid);
   SLSReenableUpdate(cid);
 }
 
 void border_hide(struct border* border) {
   if (border->wid) {
-    int cid = SLSMainConnectionID();
-    SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+    SLSOrderWindow(SLSMainConnectionID(), border->wid, 0, border->target_wid);
   }
 }
 
 void border_unhide(struct border* border) {
   if (border->disable) return;
-
-  int cid = SLSMainConnectionID();
-  if (border->wid) SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+  if (border->wid) {
+    SLSOrderWindow(SLSMainConnectionID(), border->wid, -1, border->target_wid);
+  }
   else border_draw(border);
 }

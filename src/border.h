@@ -23,20 +23,18 @@ struct border {
   bool needs_redraw;
   bool disable;
 
-  CGRect bounds;
-  CGPoint origin;
-
-  uint32_t wid;
   uint64_t sid;
+  uint32_t wid;
   uint32_t target_wid;
 
+  CGRect bounds;
   CGContextRef context;
 };
 
 void border_init(struct border* border);
-void border_unhide(struct border* border);
-void border_hide(struct border* border);
+void border_destroy(struct border* border);
+
 void border_move(struct border* border);
 void border_draw(struct border* border);
-
-void border_destroy(struct border* border);
+void border_hide(struct border* border);
+void border_unhide(struct border* border);

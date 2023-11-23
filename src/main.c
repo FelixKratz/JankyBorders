@@ -12,13 +12,11 @@ struct settings g_settings = { .active_window_color = 0xffe1e3e4,
                                .border_width = 4.f,
                                .border_style = BORDER_STYLE_ROUND  };
 
-static TABLE_HASH_FUNC(hash_windows)
-{
+static TABLE_HASH_FUNC(hash_windows) {
   return *(uint32_t *) key;
 }
 
-static TABLE_COMPARE_FUNC(cmp_windows)
-{
+static TABLE_COMPARE_FUNC(cmp_windows) {
   return *(uint32_t *) key_a == *(uint32_t *) key_b;
 }
 
@@ -27,10 +25,9 @@ static void event_callback(CFMachPortRef port, void* message, CFIndex size, void
   CGEventRef event = SLEventCreateNextEvent(cid);
   if (!event) return;
   do {
-    CGEventType type = CGEventGetType(event);
     CFRelease(event);
     event = SLEventCreateNextEvent(cid);
-  } while (event != NULL);
+  } while (event);
 }
 
 static uint32_t parse_settings(struct settings* settings, int count, char** arguments) {

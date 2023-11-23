@@ -130,6 +130,27 @@ void border_draw(struct border* border) {
                                                           NULL          );
 
       CGContextAddPath(border->context, stroke_path);
+      CGColorRef c[2];
+      int color1 = 0xff5c8f96;
+      int color2 = 0xffc27674;
+      float r1 = ((color1 >> 16) & 0xff) / 255.f;
+      float g1 = ((color1 >> 8) & 0xff) / 255.f;
+      float b1 = ((color1 >> 0) & 0xff) / 255.f;
+      float a1 = ((color1 >> 24) & 0xff) / 255.f;
+      float r2 = ((color2 >> 16) & 0xff) / 255.f;
+      float g2 = ((color2 >> 8) & 0xff) / 255.f;
+      float b2 = ((color2 >> 0) & 0xff) / 255.f;
+      float a2 = ((color2 >> 24) & 0xff) / 255.f;
+      c[0] = CGColorCreateSRGB(r1, g1, b1, a1);
+      c[1] = CGColorCreateSRGB(r2, g2, b2, a2);
+      CFArrayRef cfc = CFArrayCreate(NULL, (const void **)c, 2, &kCFTypeArrayCallBacks);
+      CGGradientRef grad = CGGradientCreateWithColors(NULL, cfc, NULL);
+
+      CGContextReplacePathWithStrokedPath(border->context);
+      CGContextClip(border->context);
+      CGPoint other_corner = CGPointMake(frame.size.width, frame.size.height);
+      CGContextDrawLinearGradient(border->context, grad, CGPointZero, other_corner, 0);
+
       CGContextStrokePath(border->context);
       CFRelease(stroke_path);
     }

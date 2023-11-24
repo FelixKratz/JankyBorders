@@ -7,8 +7,10 @@
 pid_t g_pid;
 struct table g_windows;
 struct mach_server g_mach_server;
-struct settings g_settings = { .active_window_color = 0xffe1e3e4,
-                               .inactive_window_color = 0xff494d64,
+struct settings g_settings = { .active_window = { .stype = SOLID,
+                                                  .style.color = 0xffe1e3e4 },
+                               .inactive_window = { .stype = SOLID,
+                                                    .style.color =  0xff494d64 },
                                .border_width = 4.f,
                                .border_style = BORDER_STYLE_ROUND  };
 
@@ -35,12 +37,46 @@ static uint32_t parse_settings(struct settings* settings, int count, char** argu
   for (int i = 0; i < count; i++) {
     if (sscanf(arguments[i],
                "active_color=0x%x",
-               &settings->active_window_color) == 1) {
+               &settings->active_window.style.color) == 1) {
+      settings->active_window.stype = SOLID;
+      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
+    }
+    else if (sscanf(arguments[i],
+             "active_color=gradient(top_left=0x%x,bottom_right=0x%x)",
+             &settings->active_window.style.gradient.color1,
+             &settings->active_window.style.gradient.color2) == 2) {
+      settings->active_window.stype = GRADIENT;
+      settings->active_window.style.gradient.direction = TOPLEFT_BOTTOMRIGHT;
+      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
+    }
+    else if (sscanf(arguments[i],
+             "active_color=gradient(top_right=0x%x,bottom_left=0x%x)",
+             &settings->active_window.style.gradient.color1,
+             &settings->active_window.style.gradient.color2) == 2) {
+      settings->active_window.stype = GRADIENT;
+      settings->active_window.style.gradient.direction = TOPRIGHT_BOTTOMLEFT;
       update_mask |= BORDER_UPDATE_MASK_ACTIVE;
     }
     else if (sscanf(arguments[i],
              "inactive_color=0x%x",
-             &settings->inactive_window_color) == 1) {
+             &settings->inactive_window.style.color) == 1) {
+      settings->inactive_window.stype = SOLID;
+      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
+    }
+    else if (sscanf(arguments[i],
+             "inactive_color=gradient(top_left=0x%x,bottom_right=0x%x)",
+             &settings->inactive_window.style.gradient.color1,
+             &settings->inactive_window.style.gradient.color2) == 2) {
+      settings->inactive_window.stype = GRADIENT;
+      settings->inactive_window.style.gradient.direction = TOPLEFT_BOTTOMRIGHT;
+      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
+    }
+    else if (sscanf(arguments[i],
+             "inactive_color=gradient(top_right=0x%x,bottom_left=0x%x)",
+             &settings->inactive_window.style.gradient.color1,
+             &settings->inactive_window.style.gradient.color2) == 2) {
+      settings->inactive_window.stype = GRADIENT;
+      settings->inactive_window.style.gradient.direction = TOPRIGHT_BOTTOMLEFT;
       update_mask |= BORDER_UPDATE_MASK_INACTIVE;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {

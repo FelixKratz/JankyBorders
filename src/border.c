@@ -84,17 +84,24 @@ void border_draw(struct border* border) {
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
+    window_style style = border->focused ? g_settings.active_window : g_settings.inactive_window;
     uint32_t color = border->focused
-                     ? g_settings.active_window_color
-                     : g_settings.inactive_window_color;
+                     ? g_settings.active_window.style.color
+                     : g_settings.inactive_window.style.color;
 
     float r = ((color >> 16) & 0xff) / 255.f;
     float g = ((color >> 8) & 0xff) / 255.f;
     float b = ((color >> 0) & 0xff) / 255.f;
     float a = ((color >> 24) & 0xff) / 255.f;
+    float r1 = ((style.style.gradient.color1 >> 16) & 0xff) / 255.f;
+    float g1 = ((style.style.gradient.color1 >> 8) & 0xff) / 255.f;
+    float b1 = ((style.style.gradient.color1 >> 0) & 0xff) / 255.f;
+    float a1 = ((style.style.gradient.color1 >> 24) & 0xff) / 255.f;
+    float r2 = ((style.style.gradient.color2 >> 16) & 0xff) / 255.f;
+    float g2 = ((style.style.gradient.color2 >> 8) & 0xff) / 255.f;
+    float b2 = ((style.style.gradient.color2 >> 0) & 0xff) / 255.f;
+    float a2 = ((style.style.gradient.color2 >> 24) & 0xff) / 255.f;
 
-    CGContextSetRGBStrokeColor(border->context, r, g, b, a);
-    CGContextSetRGBFillColor(border->context, r, g, b, a);
     CGContextSetLineWidth(border->context, g_settings.border_width);
     CGContextClearRect(border->context, frame);
     CGContextSaveGState(border->context);
@@ -121,7 +128,23 @@ void border_draw(struct border* border) {
 
       CGPathRef square_path = CGPathCreateWithRect(square_rect, NULL);
       CGContextAddPath(border->context, square_path);
-      CGContextFillPath(border->context);
+
+      if (style.stype == SOLID) {
+        CGContextSetRGBFillColor(border->context, r, g, b, a);
+        CGContextFillPath(border->context);
+      }
+      else if (style.stype == GRADIENT) {
+        CGColorRef c[2];
+        c[0] = CGColorCreateSRGB(r1, g1, b1, a1);
+        c[1] = CGColorCreateSRGB(r2, g2, b2, a2);
+        CFArrayRef cfc = CFArrayCreate(NULL, (const void **)c, 2, &kCFTypeArrayCallBacks);
+        CGGradientRef grad = CGGradientCreateWithColors(NULL, cfc, NULL);
+
+        CGPoint other_corner = CGPointMake(frame.size.width, frame.size.height);
+        CGContextDrawLinearGradient(border->context, grad, CGPointZero, other_corner, 0);
+        /* TODO: this doesn't draw properly, it is 2 times too thick/wide */
+      }
+
       CFRelease(square_path);
     } else {
       CGPathRef stroke_path = CGPathCreateWithRoundedRect(path_rect,
@@ -130,26 +153,22 @@ void border_draw(struct border* border) {
                                                           NULL          );
 
       CGContextAddPath(border->context, stroke_path);
-      CGColorRef c[2];
-      int color1 = 0xff5c8f96;
-      int color2 = 0xffc27674;
-      float r1 = ((color1 >> 16) & 0xff) / 255.f;
-      float g1 = ((color1 >> 8) & 0xff) / 255.f;
-      float b1 = ((color1 >> 0) & 0xff) / 255.f;
-      float a1 = ((color1 >> 24) & 0xff) / 255.f;
-      float r2 = ((color2 >> 16) & 0xff) / 255.f;
-      float g2 = ((color2 >> 8) & 0xff) / 255.f;
-      float b2 = ((color2 >> 0) & 0xff) / 255.f;
-      float a2 = ((color2 >> 24) & 0xff) / 255.f;
-      c[0] = CGColorCreateSRGB(r1, g1, b1, a1);
-      c[1] = CGColorCreateSRGB(r2, g2, b2, a2);
-      CFArrayRef cfc = CFArrayCreate(NULL, (const void **)c, 2, &kCFTypeArrayCallBacks);
-      CGGradientRef grad = CGGradientCreateWithColors(NULL, cfc, NULL);
 
-      CGContextReplacePathWithStrokedPath(border->context);
-      CGContextClip(border->context);
-      CGPoint other_corner = CGPointMake(frame.size.width, frame.size.height);
-      CGContextDrawLinearGradient(border->context, grad, CGPointZero, other_corner, 0);
+      if (style.stype == SOLID) {
+        CGContextSetRGBStrokeColor(border->context, r, g, b, a);
+      }
+      else if (style.stype == GRADIENT) {
+        CGColorRef c[2];
+        c[0] = CGColorCreateSRGB(r1, g1, b1, a1);
+        c[1] = CGColorCreateSRGB(r2, g2, b2, a2);
+        CFArrayRef cfc = CFArrayCreate(NULL, (const void **)c, 2, &kCFTypeArrayCallBacks);
+        CGGradientRef grad = CGGradientCreateWithColors(NULL, cfc, NULL);
+
+        CGContextReplacePathWithStrokedPath(border->context);
+        CGContextClip(border->context);
+        CGPoint other_corner = CGPointMake(frame.size.width, frame.size.height);
+        CGContextDrawLinearGradient(border->context, grad, CGPointZero, other_corner, 0);
+      }
 
       CGContextStrokePath(border->context);
       CFRelease(stroke_path);

@@ -84,17 +84,52 @@ void border_draw(struct border* border) {
 
   if (border->needs_redraw) {
     border->needs_redraw = false;
-    uint32_t color = border->focused
-                     ? g_settings.active_window_color
-                     : g_settings.inactive_window_color;
+    struct color_style color_style = border->focused
+                                     ? g_settings.active_window
+                                     : g_settings.inactive_window;
 
-    float r = ((color >> 16) & 0xff) / 255.f;
-    float g = ((color >> 8) & 0xff) / 255.f;
-    float b = ((color >> 0) & 0xff) / 255.f;
-    float a = ((color >> 24) & 0xff) / 255.f;
+    CGGradientRef gradient = NULL;
+    CGPoint gradient_direction[2];
+    if (color_style.stype == COLOR_STYLE_SOLID) {
+      uint32_t color = color_style.color;
+      float a = ((color_style.color >> 24) & 0xff) / 255.f;
+      float r = ((color_style.color >> 16) & 0xff) / 255.f;
+      float g = ((color_style.color >> 8) & 0xff) / 255.f;
+      float b = ((color_style.color >> 0) & 0xff) / 255.f;
+      CGContextSetRGBFillColor(border->context, r, g, b, a);
+      CGContextSetRGBStrokeColor(border->context, r, g, b, a);
+    } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+      float a1 = ((color_style.gradient.color1 >> 24) & 0xff) / 255.f;
+      float a2 = ((color_style.gradient.color2 >> 24) & 0xff) / 255.f;
+      float r1 = ((color_style.gradient.color1 >> 16) & 0xff) / 255.f;
+      float r2 = ((color_style.gradient.color2 >> 16) & 0xff) / 255.f;
+      float g1 = ((color_style.gradient.color1 >> 8) & 0xff) / 255.f;
+      float g2 = ((color_style.gradient.color2 >> 8) & 0xff) / 255.f;
+      float b1 = ((color_style.gradient.color1 >> 0) & 0xff) / 255.f;
+      float b2 = ((color_style.gradient.color2 >> 0) & 0xff) / 255.f;
 
-    CGContextSetRGBStrokeColor(border->context, r, g, b, a);
-    CGContextSetRGBFillColor(border->context, r, g, b, a);
+      CGColorRef c[] = { CGColorCreateSRGB(r1, g1, b1, a1),
+                         CGColorCreateSRGB(r2, g2, b2, a2) };
+      CFArrayRef cfc = CFArrayCreate(NULL,
+                                     (const void **)c,
+                                     2,
+                                     &kCFTypeArrayCallBacks);
+      gradient = CGGradientCreateWithColors(NULL, cfc, NULL);
+      CFRelease(cfc);
+      CGColorRelease(c[0]);
+      CGColorRelease(c[1]);
+      CGPoint point1;
+      CGPoint point2;
+      if (color_style.gradient.direction == TR_TO_BL) {
+        gradient_direction[0] = CGPointZero;
+        gradient_direction[1] = CGPointMake(frame.size.width,
+                                            frame.size.height);
+      } else if (color_style.gradient.direction == TL_TO_BR) {
+        gradient_direction[0] = CGPointMake(0, frame.size.height);
+        gradient_direction[1] = CGPointMake(frame.size.width, 0);
+      }
+    }
+
     CGContextSetLineWidth(border->context, g_settings.border_width);
     CGContextClearRect(border->context, frame);
     CGContextSaveGState(border->context);
@@ -121,7 +156,18 @@ void border_draw(struct border* border) {
 
       CGPathRef square_path = CGPathCreateWithRect(square_rect, NULL);
       CGContextAddPath(border->context, square_path);
-      CGContextFillPath(border->context);
+
+      if (color_style.stype == COLOR_STYLE_SOLID) {
+        CGContextFillPath(border->context);
+      }
+      else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+        CGContextClip(border->context);
+        CGContextDrawLinearGradient(border->context,
+                                    gradient,
+                                    gradient_direction[0],
+                                    gradient_direction[1],
+                                    0                     );
+      }
       CFRelease(square_path);
     } else {
       CGPathRef stroke_path = CGPathCreateWithRoundedRect(path_rect,
@@ -130,10 +176,25 @@ void border_draw(struct border* border) {
                                                           NULL          );
 
       CGContextAddPath(border->context, stroke_path);
-      CGContextStrokePath(border->context);
+
+      if (color_style.stype == COLOR_STYLE_SOLID) {
+        CGContextStrokePath(border->context);
+      }
+      else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+        CGContextReplacePathWithStrokedPath(border->context);
+        CGContextClip(border->context);
+        
+        CGContextDrawLinearGradient(border->context,
+                                    gradient,
+                                    gradient_direction[0],
+                                    gradient_direction[1],
+                                    0                     );
+      }
+
       CFRelease(stroke_path);
     }
     CFRelease(clip_path);
+    CGGradientRelease(gradient);
   
     CGContextFlush(border->context);
     CGContextRestoreGState(border->context);

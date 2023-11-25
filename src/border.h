@@ -11,21 +11,24 @@
 #define BORDER_UPDATE_MASK_ALL      (BORDER_UPDATE_MASK_ACTIVE \
                                      | BORDER_UPDATE_MASK_INACTIVE)
 
-typedef struct window_style {
-  enum { GRADIENT, SOLID } stype;
-  union style {
-    struct gradient {
-      uint32_t color1;
-      uint32_t color2;
-      enum { TOPLEFT_BOTTOMRIGHT, TOPRIGHT_BOTTOMLEFT } direction;
-    } gradient;
+struct gradient {
+  enum { TL_TO_BR, TR_TO_BL } direction;
+  uint32_t color1;
+  uint32_t color2;
+};
+
+struct color_style {
+  enum { COLOR_STYLE_GRADIENT, COLOR_STYLE_SOLID } stype;
+  union {
     uint32_t color;
-  } style;
-} window_style;
+    struct gradient gradient;
+  };
+};
 
 struct settings {
-  window_style active_window;
-  window_style inactive_window;
+  struct color_style active_window;
+  struct color_style inactive_window;
+
   float border_width;
   char border_style;
 };

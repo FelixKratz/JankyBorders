@@ -183,6 +183,7 @@ int main(int argc, char** argv) {
 
   windows_add_existing_windows(&g_windows);
   mach_server_begin(&g_mach_server, message_handler);
+  if (!update_mask) execute_config_file("borders", "bordersrc");
   CFRunLoopRun();
   return 0;
 }

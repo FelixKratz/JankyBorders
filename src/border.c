@@ -7,9 +7,15 @@ void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
 }
 
-void border_destroy(struct border* border) {
-  SLSReleaseWindow(SLSMainConnectionID(), border->wid);
+void border_destroy_window(struct border* border) {
+  if (border->wid) SLSReleaseWindow(SLSMainConnectionID(), border->wid);
   if (border->context) CGContextRelease(border->context);
+  border->wid = 0;
+  border->context = NULL;
+}
+
+void border_destroy(struct border* border) {
+  border_destroy_window(border);
   free(border);
 }
 
@@ -58,7 +64,7 @@ void border_draw(struct border* border) {
 
   SLSDisableUpdate(cid);
   if (!border->wid) {
-    border->wid = window_create(cid, frame);
+    border->wid = window_create(cid, frame, g_settings.hidpi);
     border->bounds = frame;
     border->needs_redraw = true;
     border->context = SLWindowContextCreate(cid, border->wid, NULL);

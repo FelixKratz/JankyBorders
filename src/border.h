@@ -11,6 +11,8 @@
 #define BORDER_UPDATE_MASK_ALL      (BORDER_UPDATE_MASK_ACTIVE \
                                      | BORDER_UPDATE_MASK_INACTIVE)
 
+#define BORDER_UPDATE_MASK_RECREATE_ALL (1 << 2)
+
 struct gradient {
   enum { TL_TO_BR, TR_TO_BL } direction;
   uint32_t color1;
@@ -31,6 +33,7 @@ struct settings {
 
   float border_width;
   char border_style;
+  bool hidpi;
 };
 
 struct border {
@@ -47,6 +50,7 @@ struct border {
 };
 
 void border_init(struct border* border);
+void border_destroy_window(struct border* border);
 void border_destroy(struct border* border);
 
 void border_move(struct border* border);

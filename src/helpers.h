@@ -207,7 +207,7 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
   CFRelease(window_list);
 }
 
-static inline uint32_t window_create(int cid, CGRect frame) {
+static inline uint32_t window_create(int cid, CGRect frame, bool hidpi) {
   uint64_t id;
   CFTypeRef frame_region;
 
@@ -224,7 +224,7 @@ static inline uint32_t window_create(int cid, CGRect frame) {
   uint64_t set_tags = 1ULL << 1;
   uint64_t clear_tags = 0;
 
-  SLSSetWindowResolution(cid, wid, 1.0f);
+  SLSSetWindowResolution(cid, wid, hidpi ? 2.0f : 1.0f);
   SLSSetWindowTags(cid, wid, &set_tags, 64);
   SLSClearWindowTags(cid, wid, &clear_tags, 64);
   SLSSetWindowOpacity(cid, wid, 0);

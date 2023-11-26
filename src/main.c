@@ -1,3 +1,4 @@
+#include "border.h"
 #include "hashtable.h"
 #include "events.h"
 #include "windows.h"
@@ -12,7 +13,8 @@ struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                .inactive_window = { .stype = COLOR_STYLE_SOLID,
                                                     .color =  0xff494d64 },
                                .border_width = 4.f,
-                               .border_style = BORDER_STYLE_ROUND  };
+                               .border_style = BORDER_STYLE_ROUND,
+                               .hidpi = false                                };
 
 static TABLE_HASH_FUNC(hash_windows) {
   return *(uint32_t *) key;
@@ -84,6 +86,12 @@ static uint32_t parse_settings(struct settings* settings, int count, char** argu
     }
     else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;
+    } else if (strcmp(arguments[i], "hidpi=on") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->hidpi = true;
+    } else if (strcmp(arguments[i], "hidpi=off") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->hidpi = false;
     } else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
     }
@@ -99,7 +107,9 @@ static void message_handler(void* data, uint32_t len) {
     message += strlen(message) + 1;
   }
 
-  if (update_mask & BORDER_UPDATE_MASK_ALL) {
+  if (update_mask & BORDER_UPDATE_MASK_RECREATE_ALL) {
+    windows_recreate_all_borders(&g_windows);
+  } else if (update_mask & BORDER_UPDATE_MASK_ALL) {
     windows_update_all(&g_windows);
   } else if (update_mask & BORDER_UPDATE_MASK_ACTIVE) {
     windows_update_active(&g_windows);

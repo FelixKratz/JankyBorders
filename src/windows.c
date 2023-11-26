@@ -52,6 +52,22 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   return window_created;
 }
 
+void windows_recreate_all_borders(struct table* windows) {
+  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
+    struct bucket* bucket = windows->buckets[window_index];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (border && border->wid) {
+          border_destroy_window(border);
+          border_draw(border);
+        }
+      }
+      bucket = bucket->next;
+    }
+  }
+}
+
 void windows_update_all(struct table* windows) {
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];

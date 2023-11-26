@@ -35,7 +35,7 @@ already running instance (just like in yabai and sketchybar).
 ### Bootstrap with yabai
 For example, if you are using `yabai`, you could add:
 ```bash
-borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0 2>/dev/null 1>&2 &
+borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0 &
 ```
 to the very end of your `yabairc`.
 

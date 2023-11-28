@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2023-11-12"
+.TH "borders" "1" "2023-11-28"
 .P
 .SH NAME
 .P
@@ -20,7 +20,7 @@ JankyBorders - A window border system for macOS
 \fBJankyBorders\fR is a lightweight tool designed to add colored borders to user
 windows on macOS 14.\&0+.\& It enhances the user experience by visually highlighting
 the currently focused window without relying on the accessibility API, thereby
-ensuring performance and responsiveness.\&
+being faster than comparable tools.\&
 .P
 .SH OPTIONS
 .P
@@ -46,11 +46,30 @@ Determines the width of the border.\& For example, width=5.\&0 creates a border
 5.\&0 points wide.\&
 .P
 .RE
+\fBhidpi=<boolean>\fR
+.RS 4
+If set to \fIon\fR, the border will be drawn with retina resolution.\&
+.P
+.RE
 If an instance of \fBborders\fR is already running, subsequent invocations will
 update the existing process with the new arguments.\&
 .P
+If no instance of \fBborders\fR is running and no arguments are supplied, we
+try to execute the file at ~/.\&config/borders/bordersrc where a configuration
+command could be issued.\&
+.P
 .SH NOMENCLATURE
 .P
+\fB<float>\fR
+.RS 4
+A floating point number.\&
+.P
+.RE
+\fB<boolean>\fR
+.RS 4
+Either \fIon\fR or \fIoff\fR.\&
+.P
+.RE
 \fB<style>\fR
 .RS 4
 Either \fIround\fR or \fIsquare\fR.\&
@@ -59,13 +78,16 @@ Either \fIround\fR or \fIsquare\fR.\&
 \fB<color>\fR
 .RS 4
 A color formatted as \fI0xAARRGGBB\fR, where \fIA\fR is the alpha channel, \fIR\fR the
-red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All constituents
-take a base 16 number, i.\&e.\& \fI0-F\fR.\&
+red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All
+constituents take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .P
-.RE
-\fB<float>\fR
-.RS 4
-A floating point number.\&
+The color argument can take the special values: 
+.br
+	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR 
+.br
+	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
+.br
+to create a gradient border.\& (You might need to quote these arguments depending on your shell)
 .P
 .RE
 .SH BUGS

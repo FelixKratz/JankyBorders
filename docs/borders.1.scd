@@ -13,7 +13,7 @@ JankyBorders - A window border system for macOS
 *JankyBorders* is a lightweight tool designed to add colored borders to user
 windows on macOS 14.0+. It enhances the user experience by visually highlighting
 the currently focused window without relying on the accessibility API, thereby
-ensuring performance and responsiveness.
+being faster than comparable tools.
 
 # OPTIONS
 
@@ -31,21 +31,36 @@ ensuring performance and responsiveness.
 	Determines the width of the border. For example, width=5.0 creates a border
 	5.0 points wide.
 
+*hidpi=<boolean>*
+	If set to _on_, the border will be drawn with retina resolution.
+
 If an instance of *borders* is already running, subsequent invocations will
 update the existing process with the new arguments.
 
+If no instance of *borders* is running and no arguments are supplied, we
+try to execute the file at ~/.config/borders/bordersrc where a configuration
+command could be issued.
+
 # NOMENCLATURE
+
+*<float>*
+	A floating point number.
+
+*<boolean>*
+	Either _on_ or _off_.
 
 *<style>*
 	Either _round_ or _square_.
 
 *<color>*
 	A color formatted as _0xAARRGGBB_, where _A_ is the alpha channel, _R_ the
-	red channel, _G_ the green channel and _B_ the blue channel. All constituents
-	take a base 16 number, i.e. _0-F_.
+	red channel, _G_ the green channel and _B_ the blue channel. All
+	constituents take a base 16 number, i.e. _0-F_.
 
-*<float>*
-	A floating point number.
+	The color argument can take the special values: ++
+	_gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)_ ++
+	_gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)_ ++
+to create a gradient border. (You might need to quote these arguments depending on your shell)
 
 # BUGS
 

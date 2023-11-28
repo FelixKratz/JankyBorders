@@ -2,9 +2,10 @@
 
 <img align="right" width="50%" src="images/screenshot.png" alt="Screenshot">
 
-This small project adds colored borders to all user windows on macOS Sonoma and
-later. It can be used to better identify the currently focused window. It does
-not use the accessibility API and should thus be faster than comparable tools.
+*JankyBorders* is a lightweight tool designed to add colored borders to user
+windows on macOS 14.0+. It enhances the user experience by visually highlighting
+the currently focused window without relying on the accessibility API, thereby
+being faster than comparable tools.
 
 ## Usage
 Compile the source code to a binary using `make` in the cloned repository or
@@ -17,16 +18,20 @@ brew install borders
 The binary can be started via `borders` and takes
 any of the arguments (in arbitrary order and count):
 
-* `active_color=<color_hex>`
-* `inactive_color=<color_hex>`
+* `active_color=<color>`
+* `inactive_color=<color>`
 * `width=<float>`
-* `style=<style>`
+* `style=<round/square>`
+* `hidpi=<off/on>`
 
 Those determine the color of the currently focused window, the inactive window
-and the width and style of the border respectively. The color hex shall be
-given in the format: `0xAARRGGBB`, where `A` is the alpha channel, `R` the red
-channel, `G` the green channel and `B` the blue channel. The `style` argument
-is optional and can take the values `round` and `square`.
+and the width, style and resolution of the border respectively. The color hex
+shall be given in the format: `0xAARRGGBB`, where `A` is the alpha channel, `R`
+the red channel, `G` the green channel and `B` the blue channel.
+The color argument can take the special values:
+* `gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)`
+* `gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)`
+to create a gradient border. (You might need to quote these arguments depending on your shell)
 
 If a `borders` process is already running, invoking a new `borders` instance
 with any combination of the above arguments will update the properties of the
@@ -44,6 +49,9 @@ If you want to run this as a separate service, you could also use:
 ```bash
 brew services start borders
 ```
+If the primary `borders` process is started without any arguments (or launched
+as a service by brew), it will search for a file at `~/.config/borders/
+bordersrc` and execute it on launch if found.
 
 ## Documentation
 Local documentation is available as `man borders`.

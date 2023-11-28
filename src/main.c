@@ -5,6 +5,13 @@
 #include "mach.h"
 #include <stdio.h>
 
+#define VERSION_OPT_LONG "--version"
+#define VERSION_OPT_SHRT "-v"
+
+#define MAJOR 1
+#define MINOR 3
+#define PATCH 0
+
 pid_t g_pid;
 struct table g_windows;
 struct mach_server g_mach_server;
@@ -141,8 +148,13 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
-  uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);
+  if (argc > 1 && ((strcmp(argv[1], VERSION_OPT_LONG) == 0)
+                   || (strcmp(argv[1], VERSION_OPT_SHRT) == 0))) {
+    fprintf(stdout, "borders-v%d.%d.%d\n", MAJOR, MINOR, PATCH);
+    exit(EXIT_SUCCESS);
+  }
 
+  uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);
   mach_port_t server_port = mach_get_bs_port(BS_NAME);
   if (server_port && update_mask) {
     send_args_to_server(server_port, argc, argv);

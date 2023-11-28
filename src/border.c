@@ -127,9 +127,9 @@ void border_draw(struct border* border) {
       CGPoint point1;
       CGPoint point2;
       if (color_style.gradient.direction == TR_TO_BL) {
-        gradient_direction[0] = CGPointZero;
-        gradient_direction[1] = CGPointMake(frame.size.width,
+        gradient_direction[0] = CGPointMake(frame.size.width,
                                             frame.size.height);
+        gradient_direction[1] = CGPointZero;
       } else if (color_style.gradient.direction == TL_TO_BR) {
         gradient_direction[0] = CGPointMake(0, frame.size.height);
         gradient_direction[1] = CGPointMake(frame.size.width, 0);

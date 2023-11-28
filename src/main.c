@@ -8,6 +8,9 @@
 #define VERSION_OPT_LONG "--version"
 #define VERSION_OPT_SHRT "-v"
 
+#define HELP_OPT_LONG "--help"
+#define HELP_OPT_SHRT "-h"
+
 #define MAJOR 1
 #define MINOR 3
 #define PATCH 0
@@ -151,6 +154,12 @@ int main(int argc, char** argv) {
   if (argc > 1 && ((strcmp(argv[1], VERSION_OPT_LONG) == 0)
                    || (strcmp(argv[1], VERSION_OPT_SHRT) == 0))) {
     fprintf(stdout, "borders-v%d.%d.%d\n", MAJOR, MINOR, PATCH);
+    exit(EXIT_SUCCESS);
+  }
+
+  if (argc > 1 && ((strcmp(argv[1], HELP_OPT_LONG) == 0)
+                   || (strcmp(argv[1], HELP_OPT_SHRT) == 0))) {
+    fprintf(stdout, "Refer to the man page for help: man borders\n");
     exit(EXIT_SUCCESS);
   }
 

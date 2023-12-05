@@ -28,10 +28,14 @@ Those determine the color of the currently focused window, the inactive window
 and the width, style and resolution of the border respectively. The color hex
 shall be given in the format: `0xAARRGGBB`, where `A` is the alpha channel, `R`
 the red channel, `G` the green channel and `B` the blue channel.
+
+
 The color argument can take the special values:
+
 * `gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)`
 * `gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)`
-to create a gradient border. (You might need to quote these arguments depending on your shell)
+
+(Note: Depending on your shell, you might need to quote these arguments)
 
 If a `borders` process is already running, invoking a new `borders` instance
 with any combination of the above arguments will update the properties of the
@@ -50,8 +54,25 @@ If you want to run this as a separate service, you could also use:
 brew services start borders
 ```
 If the primary `borders` process is started without any arguments (or launched
-as a service by brew), it will search for a file at `~/.config/borders/
-bordersrc` and execute it on launch if found.
+as a service by brew), it will search for a file at
+`~/.config/borders/bordersrc` and execute it on launch if found.
+
+An example configuration file could look like this:
+`~/.config/borders/bordersrc`
+```bash
+#!/bin/bash
+
+options=(
+	style=round
+	width=6.0
+	hidpi=off
+	#active_color=0xffe2e2e3
+	active_color=0xfff39660
+	inactive_color=0xff414550
+)
+
+borders "${options[@]}"
+```
 
 ## Documentation
 Local documentation is available as `man borders`.

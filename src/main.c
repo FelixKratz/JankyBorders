@@ -21,7 +21,7 @@ struct mach_server g_mach_server;
 struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                                   .color = 0xffe1e3e4 },
                                .inactive_window = { .stype = COLOR_STYLE_SOLID,
-                                                    .color =  0xff494d64 },
+                                                    .color =  0x00000000 },
                                .border_width = 4.f,
                                .border_style = BORDER_STYLE_ROUND,
                                .hidpi = false                                };

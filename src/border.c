@@ -24,11 +24,14 @@ void border_move(struct border* border) {
 
   CGRect window_frame;
   SLSGetOnscreenWindowBounds(cid, border->target_wid, &window_frame);
-  CGRect frame = CGRectInset(window_frame,
-                             -g_settings.border_width,
-                             -g_settings.border_width );
+  CGPoint origin = { .x = window_frame.origin.x
+                          - g_settings.border_width
+                          - BORDER_PADDING,
+                     .y = window_frame.origin.y
+                          - g_settings.border_width
+                          - BORDER_PADDING          };
 
-  SLSMoveWindow(cid, border->wid, &frame.origin);
+  SLSMoveWindow(cid, border->wid, &origin);
 }
 
 void border_draw(struct border* border) {
@@ -56,11 +59,12 @@ void border_draw(struct border* border) {
   }
   border->disable = false;
 
-  CGRect frame = CGRectInset(window_frame,
-                             -g_settings.border_width,
-                             -g_settings.border_width );
+  float border_offset = - g_settings.border_width - BORDER_PADDING;
+  CGRect frame = CGRectInset(window_frame, border_offset, border_offset);
+
   CGPoint origin = frame.origin;
   frame.origin = CGPointZero;
+  window_frame.origin = (CGPoint){ -border_offset, -border_offset };
 
   SLSDisableUpdate(cid);
   if (!border->wid) {
@@ -89,6 +93,7 @@ void border_draw(struct border* border) {
   SLSGetWindowSubLevel(cid, border->target_wid, &sub_level);
 
   if (border->needs_redraw) {
+    CGContextSaveGState(border->context);
     border->needs_redraw = false;
     struct color_style color_style = border->focused
                                      ? g_settings.active_window
@@ -96,7 +101,8 @@ void border_draw(struct border* border) {
 
     CGGradientRef gradient = NULL;
     CGPoint gradient_direction[2];
-    if (color_style.stype == COLOR_STYLE_SOLID) {
+    if (color_style.stype == COLOR_STYLE_SOLID
+       || color_style.stype == COLOR_STYLE_GLOW) {
       uint32_t color = color_style.color;
       float a = ((color_style.color >> 24) & 0xff) / 255.f;
       float r = ((color_style.color >> 16) & 0xff) / 255.f;
@@ -104,6 +110,12 @@ void border_draw(struct border* border) {
       float b = ((color_style.color >> 0) & 0xff) / 255.f;
       CGContextSetRGBFillColor(border->context, r, g, b, a);
       CGContextSetRGBStrokeColor(border->context, r, g, b, a);
+
+      if (color_style.stype == COLOR_STYLE_GLOW) {
+        CGColorRef color_ref = CGColorCreateGenericRGB(r, g, b, 1.0);
+        CGContextSetShadowWithColor(border->context, CGSizeZero, 10.0, color_ref);
+        CGColorRelease(color_ref);
+      }
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
       float a1 = ((color_style.gradient.color1 >> 24) & 0xff) / 255.f;
       float a2 = ((color_style.gradient.color2 >> 24) & 0xff) / 255.f;
@@ -138,11 +150,8 @@ void border_draw(struct border* border) {
 
     CGContextSetLineWidth(border->context, g_settings.border_width);
     CGContextClearRect(border->context, frame);
-    CGContextSaveGState(border->context);
 
-    CGRect path_rect = CGRectInset(frame,
-                                   g_settings.border_width,
-                                   g_settings.border_width );
+    CGRect path_rect = window_frame;
 
     CGMutablePathRef clip_path = CGPathCreateMutable();
     CGPathAddRect(clip_path, NULL, frame);
@@ -163,7 +172,8 @@ void border_draw(struct border* border) {
       CGPathRef square_path = CGPathCreateWithRect(square_rect, NULL);
       CGContextAddPath(border->context, square_path);
 
-      if (color_style.stype == COLOR_STYLE_SOLID) {
+      if (color_style.stype == COLOR_STYLE_SOLID
+         || color_style.stype == COLOR_STYLE_GLOW) {
         CGContextFillPath(border->context);
       }
       else if (color_style.stype == COLOR_STYLE_GRADIENT) {
@@ -183,7 +193,8 @@ void border_draw(struct border* border) {
 
       CGContextAddPath(border->context, stroke_path);
 
-      if (color_style.stype == COLOR_STYLE_SOLID) {
+      if (color_style.stype == COLOR_STYLE_SOLID
+         || color_style.stype == COLOR_STYLE_GLOW) {
         CGContextStrokePath(border->context);
       }
       else if (color_style.stype == COLOR_STYLE_GRADIENT) {

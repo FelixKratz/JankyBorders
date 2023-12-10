@@ -13,6 +13,8 @@
 
 #define BORDER_UPDATE_MASK_RECREATE_ALL (1 << 2)
 
+#define BORDER_PADDING 8.0
+
 struct gradient {
   enum { TL_TO_BR, TR_TO_BL } direction;
   uint32_t color1;
@@ -20,7 +22,7 @@ struct gradient {
 };
 
 struct color_style {
-  enum { COLOR_STYLE_GRADIENT, COLOR_STYLE_SOLID } stype;
+  enum { COLOR_STYLE_GRADIENT, COLOR_STYLE_SOLID, COLOR_STYLE_GLOW } stype;
   union {
     uint32_t color;
     struct gradient gradient;

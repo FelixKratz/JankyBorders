@@ -12,7 +12,7 @@ extern CGError SLSConnectionGetPID(int cid, pid_t *pid);
 extern CGError SLSRequestNotificationsForWindows(int cid, uint32_t *window_list, int window_count);
 
 extern CGError SLSWindowIsOrderedIn(int cid, uint32_t wid, bool* shown);
-extern CGError SLSGetWindowBounds(int cid, uint32_t wid, CGRect *frame);
+extern CGError SLSGetOnscreenWindowBounds(int cid, uint32_t wid, CGRect *frame);
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
 extern CGError SLSNewWindow(int cid, int type, float x, float y, CFTypeRef region, uint64_t *wid);
 extern CGError SLSReleaseWindow(int cid, uint32_t wid);
@@ -23,6 +23,8 @@ extern CGError SLSSetWindowResolution(int cid, uint32_t wid, double res);
 extern CGError SLSSetWindowOpacity(int cid, uint32_t wid, bool isOpaque);
 extern CGError SLSSetWindowAlpha(int cid, uint32_t wid, float alpha);
 extern CGError SLSSetWindowBackgroundBlurRadius(int cid, uint32_t wid, uint32_t radius);
+extern CGError SLSSetWindowShadowParameters(int cid, uint32_t wid, float std, float density, int x_offset, int y_offset);
+
 extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relativeToWID);
 extern CGError SLSSetWindowLevel(int cid, uint32_t wid, int level);
 extern CGError SLSSetWindowSubLevel(int cid, uint32_t wid, int level);

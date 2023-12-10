@@ -23,7 +23,7 @@ void border_move(struct border* border) {
   int cid = SLSMainConnectionID();
 
   CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  SLSGetOnscreenWindowBounds(cid, border->target_wid, &window_frame);
   CGRect frame = CGRectInset(window_frame,
                              -g_settings.border_width,
                              -g_settings.border_width );
@@ -46,7 +46,7 @@ void border_draw(struct border* border) {
   } 
 
   CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  SLSGetOnscreenWindowBounds(cid, border->target_wid, &window_frame);
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
       || smallest_rect.size.height < 2.f * inner_border_radius) {

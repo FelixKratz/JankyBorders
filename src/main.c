@@ -3,6 +3,7 @@
 #include "events.h"
 #include "windows.h"
 #include "mach.h"
+#include "parse.h"
 #include <stdio.h>
 
 #define VERSION_OPT_LONG "--version"
@@ -32,81 +33,6 @@ static TABLE_HASH_FUNC(hash_windows) {
 
 static TABLE_COMPARE_FUNC(cmp_windows) {
   return *(uint32_t *) key_a == *(uint32_t *) key_b;
-}
-
-static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
-  int cid = SLSMainConnectionID();
-  CGEventRef event = SLEventCreateNextEvent(cid);
-  if (!event) return;
-  do {
-    CFRelease(event);
-    event = SLEventCreateNextEvent(cid);
-  } while (event);
-}
-
-static uint32_t parse_settings(struct settings* settings, int count, char** arguments) {
-  uint32_t update_mask = 0;
-  for (int i = 0; i < count; i++) {
-    if (sscanf(arguments[i],
-               "active_color=0x%x",
-               &settings->active_window.color) == 1) {
-      settings->active_window.stype = COLOR_STYLE_SOLID;
-      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
-    }
-    else if (sscanf(arguments[i],
-             "active_color=gradient(top_left=0x%x,bottom_right=0x%x)",
-             &settings->active_window.gradient.color1,
-             &settings->active_window.gradient.color2) == 2) {
-      settings->active_window.stype = COLOR_STYLE_GRADIENT;
-      settings->active_window.gradient.direction = TL_TO_BR;
-      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
-    }
-    else if (sscanf(arguments[i],
-             "active_color=gradient(top_right=0x%x,bottom_left=0x%x)",
-             &settings->active_window.gradient.color1,
-             &settings->active_window.gradient.color2) == 2) {
-      settings->active_window.stype = COLOR_STYLE_GRADIENT;
-      settings->active_window.gradient.direction = TR_TO_BL;
-      update_mask |= BORDER_UPDATE_MASK_ACTIVE;
-    }
-    else if (sscanf(arguments[i],
-             "inactive_color=0x%x",
-             &settings->inactive_window.color) == 1) {
-      settings->inactive_window.stype = COLOR_STYLE_SOLID;
-      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
-    }
-    else if (sscanf(arguments[i],
-             "inactive_color=gradient(top_left=0x%x,bottom_right=0x%x)",
-             &settings->inactive_window.gradient.color1,
-             &settings->inactive_window.gradient.color2) == 2) {
-      settings->inactive_window.stype = COLOR_STYLE_GRADIENT;
-      settings->inactive_window.gradient.direction = TL_TO_BR;
-      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
-    }
-    else if (sscanf(arguments[i],
-             "inactive_color=gradient(top_right=0x%x,bottom_left=0x%x)",
-             &settings->inactive_window.gradient.color1,
-             &settings->inactive_window.gradient.color2) == 2) {
-      settings->inactive_window.stype = COLOR_STYLE_GRADIENT;
-      settings->inactive_window.gradient.direction = TR_TO_BL;
-      update_mask |= BORDER_UPDATE_MASK_INACTIVE;
-    }
-    else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {
-      update_mask |= BORDER_UPDATE_MASK_ALL;
-    }
-    else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {
-      update_mask |= BORDER_UPDATE_MASK_ALL;
-    } else if (strcmp(arguments[i], "hidpi=on") == 0) {
-      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
-      settings->hidpi = true;
-    } else if (strcmp(arguments[i], "hidpi=off") == 0) {
-      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
-      settings->hidpi = false;
-    } else {
-      printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
-    }
-  }
-  return update_mask;
 }
 
 static void message_handler(void* data, uint32_t len) {
@@ -148,6 +74,16 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
   *temp++ = '\0';
 
   mach_send_message(port, message, message_length);
+}
+
+static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
+  int cid = SLSMainConnectionID();
+  CGEventRef event = SLEventCreateNextEvent(cid);
+  if (!event) return;
+  do {
+    CFRelease(event);
+    event = SLEventCreateNextEvent(cid);
+  } while (event);
 }
 
 int main(int argc, char** argv) {

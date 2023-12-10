@@ -1,4 +1,4 @@
-FILES = src/main.c src/mach.c src/hashtable.c src/events.c src/windows.c src/border.c 
+FILES = src/main.c src/parse.c src/mach.c src/hashtable.c src/events.c src/windows.c src/border.c 
 LIBS = -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLight
 
 all: | bin

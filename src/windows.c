@@ -1,9 +1,18 @@
 #include "windows.h"
 #include "hashtable.h"
-#include <string.h>
 #include "border.h"
+#include <string.h>
+#include <libproc.h>
 
 extern pid_t g_pid;
+extern struct settings g_settings;
+
+static bool window_blacklisted(struct table* blacklist, pid_t pid) {
+  static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
+  proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
+  if (table_find(blacklist, pid_name_buffer)) return true;
+  return false;
+}
 
 bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   bool window_created = false;
@@ -13,7 +22,8 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
   pid_t pid = 0;
   SLSConnectionGetPID(wid_cid, &pid);
-  if (pid == g_pid) return false;
+  if (pid == g_pid || window_blacklisted(&g_settings.blacklist, pid))
+    return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),
@@ -52,20 +62,26 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   return window_created;
 }
 
-void windows_recreate_all_borders(struct table* windows) {
+static void windows_remove_all(struct table* windows) {
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
-        if (border && border->wid) {
-          border_destroy_window(border);
-          border_draw(border);
+        if (border) {
+          table_remove(windows, &border->target_wid);
+          border_destroy(border);
         }
       }
       bucket = bucket->next;
     }
   }
+  windows_update_notifications(windows);
+}
+
+void windows_recreate_all_borders(struct table* windows) {
+  windows_remove_all(windows);
+  windows_add_existing_windows(windows);
 }
 
 void windows_update_all(struct table* windows) {

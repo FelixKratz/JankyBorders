@@ -29,6 +29,15 @@ void table_free(struct table *table) {
   }
 }
 
+void table_clear(struct table* table) {
+  table_hash_func* hash = table->hash;
+  table_compare_func* cmp = table->cmp;
+  uint32_t capacity = table->capacity;
+
+  table_free(table);
+  table_init(table, capacity, hash, cmp);
+}
+
 struct bucket** table_get_bucket(struct table* table, void* key) {
   struct bucket** bucket = table->buckets
                            + (table->hash(key) % table->capacity);

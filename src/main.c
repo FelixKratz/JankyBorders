@@ -35,6 +35,20 @@ static TABLE_COMPARE_FUNC(cmp_windows) {
   return *(uint32_t *) key_a == *(uint32_t *) key_b;
 }
 
+static TABLE_HASH_FUNC(hash_blacklist) {
+  // djb2 by Dan Bernstein
+  unsigned long hash = 5381;
+  char c;
+  while((c = *((char*)key++))) {
+    hash = ((hash << 5) + hash) + c;
+  }
+  return hash;
+}
+
+static TABLE_COMPARE_FUNC(cmp_blacklist) {
+  return strcmp((char*)key_a, (char*)key_b) == 0;
+}
+
 static void message_handler(void* data, uint32_t len) {
   char* message = data;
   uint32_t update_mask = 0;
@@ -99,6 +113,7 @@ int main(int argc, char** argv) {
     exit(EXIT_SUCCESS);
   }
 
+  table_init(&g_settings.blacklist, 64, hash_blacklist, cmp_blacklist);
   uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);
   mach_port_t server_port = mach_get_bs_port(BS_NAME);
   if (server_port && update_mask) {
@@ -111,8 +126,6 @@ int main(int argc, char** argv) {
   }
 
   pid_for_task(mach_task_self(), &g_pid);
-  table_init(&g_windows, 1024, hash_windows, cmp_windows);
-
   int cid = SLSMainConnectionID();
   events_register(cid);
   SLSWindowManagementBridgeSetDelegate(NULL);
@@ -138,7 +151,9 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
+  table_init(&g_windows, 1024, hash_windows, cmp_windows);
   windows_add_existing_windows(&g_windows);
+
   mach_server_begin(&g_mach_server, message_handler);
   if (!update_mask) execute_config_file("borders", "bordersrc");
   CFRunLoopRun();

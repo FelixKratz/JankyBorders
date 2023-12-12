@@ -1,6 +1,11 @@
-# JankyBorders
+<h1 align="center">JankyBorders</h1>
 
-<img align="right" width="50%" src="images/screenshot.png" alt="Screenshot">
+<p align="center">
+<img src="images/screenshot.png" alt="Screenshot"/>
+</p>
+<p align="center">
+<a href="https://github.com/slano-ls/JankyBorders/wiki">Documentation</a>
+</p>
 
 *JankyBorders* is a lightweight tool designed to add colored borders to user
 windows on macOS 14.0+. It enhances the user experience by visually highlighting

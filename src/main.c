@@ -14,7 +14,7 @@
 
 #define MAJOR 1
 #define MINOR 3
-#define PATCH 0
+#define PATCH 1
 
 pid_t g_pid;
 struct table g_windows;

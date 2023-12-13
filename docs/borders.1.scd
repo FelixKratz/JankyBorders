@@ -10,10 +10,10 @@ JankyBorders - A window border system for macOS
 
 # DESCRIPTION
 
-*JankyBorders* is a lightweight tool designed to add colored borders to user
-windows on macOS 14.0+. It enhances the user experience by visually highlighting
-the currently focused window without relying on the accessibility API, thereby
-being faster than comparable tools.
+*JankyBorders* is a lightweight tool designed to add colored borders to
+user windows on macOS 14.0+. It enhances the user experience by visually
+highlighting the currently focused window without relying on the accessibility
+API, thereby being faster than comparable tools.
 
 # OPTIONS
 
@@ -34,12 +34,17 @@ being faster than comparable tools.
 *hidpi=<boolean>*
 	If set to _on_, the border will be drawn with retina resolution.
 
+*blacklist=<application_list>*
+	The applications specified here are excluded from being bordered. For
+	example, blacklist="Safari,kitty" excludes Safari and kitty from being
+	bordered.
+
 If an instance of *borders* is already running, subsequent invocations will
 update the existing process with the new arguments.
 
-If no instance of *borders* is running and no arguments are supplied, we
-try to execute the file at ~/.config/borders/bordersrc where a configuration
-command could be issued.
+If no instance of *borders* is running and no arguments are supplied, we try
+to execute a file at ~/.config/borders/bordersrc where a configuration command
+could be issued.
 
 # NOMENCLATURE
 
@@ -60,7 +65,12 @@ command could be issued.
 	The color argument can take the special values: ++
 	_gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)_ ++
 	_gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)_ ++
-to create a gradient border. (You might need to quote these arguments depending on your shell)
+	_glow(0xAARRGGBB)_ ++
+(You might need to quote these arguments depending on your shell)
+
+*<application_list>*
+	A comma separated list of application names. This argument should be
+	quoted.
 
 # BUGS
 

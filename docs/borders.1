@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2023-11-28"
+.TH "borders" "1" "2023-12-13"
 .P
 .SH NAME
 .P
@@ -17,10 +17,10 @@ JankyBorders - A window border system for macOS
 .P
 .SH DESCRIPTION
 .P
-\fBJankyBorders\fR is a lightweight tool designed to add colored borders to user
-windows on macOS 14.\&0+.\& It enhances the user experience by visually highlighting
-the currently focused window without relying on the accessibility API, thereby
-being faster than comparable tools.\&
+\fBJankyBorders\fR is a lightweight tool designed to add colored borders to
+user windows on macOS 14.\&0+.\& It enhances the user experience by visually
+highlighting the currently focused window without relying on the accessibility
+API, thereby being faster than comparable tools.\&
 .P
 .SH OPTIONS
 .P
@@ -51,12 +51,19 @@ Determines the width of the border.\& For example, width=5.\&0 creates a border
 If set to \fIon\fR, the border will be drawn with retina resolution.\&
 .P
 .RE
+\fBblacklist=<application_list>\fR
+.RS 4
+The applications specified here are excluded from being bordered.\& For
+example, blacklist="Safari,kitty" excludes Safari and kitty from being
+bordered.\&
+.P
+.RE
 If an instance of \fBborders\fR is already running, subsequent invocations will
 update the existing process with the new arguments.\&
 .P
-If no instance of \fBborders\fR is running and no arguments are supplied, we
-try to execute the file at ~/.\&config/borders/bordersrc where a configuration
-command could be issued.\&
+If no instance of \fBborders\fR is running and no arguments are supplied, we try
+to execute a file at ~/.\&config/borders/bordersrc where a configuration command
+could be issued.\&
 .P
 .SH NOMENCLATURE
 .P
@@ -87,7 +94,15 @@ The color argument can take the special values:
 .br
 	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
 .br
-to create a gradient border.\& (You might need to quote these arguments depending on your shell)
+	\fIglow(0xAARRGGBB)\fR 
+.br
+(You might need to quote these arguments depending on your shell)
+.P
+.RE
+\fB<application_list>\fR
+.RS 4
+A comma separated list of application names.\& This argument should be
+quoted.\&
 .P
 .RE
 .SH BUGS

@@ -15,7 +15,7 @@ brew tap FelixKratz/formulae
 brew install borders
 ```
 
-For a comprehensive overview of all avaliable options and commands, consult the
+For a comprehensive overview of all available options and commands, consult the
 man page: `man borders`. A rendered version of the man page is available in the
 [Wiki](https://github.com/FelixKratz/JankyBorders/wiki/Man-Page).
 
@@ -61,9 +61,9 @@ borders "${options[@]}"
 
 #### Updating the border properties during runtime
 If a `borders` process is already running, invoking a new `borders` instance
-with any combination of the available arguments will update the properties of
+with any combination of the available options will update the properties of
 the already running instance.
 
 ## Documentation
-Local documentation is available as `man borders` and as a rendered verion in
+Local documentation is available as `man borders` and as a rendered version in
 the [Wiki](https://github.com/FelixKratz/JankyBorders/wiki/Man-Page).

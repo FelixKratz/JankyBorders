@@ -8,6 +8,7 @@ highlighting the currently focused window without relying on the accessibility
 API, thereby being faster than comparable tools.
 
 ## Usage
+### Install
 The binary can be made available by installing it through Homebrew:
 ```bash
 brew tap FelixKratz/formulae
@@ -23,13 +24,21 @@ For example, if you are using `yabai`, you could add:
 ```bash
 borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0 &
 ```
-to the very end of your `yabairc`.
+to the very end of your `yabairc`. This will start the borders with the
+specified options.
 
 ### Bootstrap with brew
 If you want to run this as a separate service, you could use:
 ```bash
 brew services start borders
 ```
+
+### Configuring the appearance
+You can either configure the appearance directly when starting the borders
+process (as shown in "Bootstrap with yabai") or use a configuration file.
+The appearance can be adapted at any point in time.
+
+#### Using a configuration file (Optional)
 If the primary `borders` process is started without any arguments (or launched
 as a service by brew), it will search for a file at
 `~/.config/borders/bordersrc` and execute it on launch if found.
@@ -50,7 +59,7 @@ options=(
 borders "${options[@]}"
 ```
 
-### Updating the border properties during runtime
+#### Updating the border properties during runtime
 If a `borders` process is already running, invoking a new `borders` instance
 with any combination of the available arguments will update the properties of
 the already running instance.

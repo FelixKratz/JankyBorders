@@ -231,7 +231,11 @@ void border_hide(struct border* border) {
 }
 
 void border_unhide(struct border* border) {
-  if (border->disable) return;
+  if (border->disable
+      || !is_space_visible(SLSMainConnectionID(), border->sid)) {
+    return;
+  }
+
   if (border->wid) {
     SLSOrderWindow(SLSMainConnectionID(), border->wid, -1, border->target_wid);
   }

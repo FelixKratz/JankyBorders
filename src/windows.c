@@ -68,10 +68,8 @@ static void windows_remove_all(struct table* windows) {
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
-        if (border) {
-          table_remove(windows, &border->target_wid);
-          border_destroy(border);
-        }
+        table_remove(windows, &border->target_wid);
+        border_destroy(border);
       }
       bucket = bucket->next;
     }

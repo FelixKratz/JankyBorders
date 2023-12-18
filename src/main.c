@@ -126,6 +126,8 @@ int main(int argc, char** argv) {
   }
 
   pid_for_task(mach_task_self(), &g_pid);
+  table_init(&g_windows, 1024, hash_windows, cmp_windows);
+
   int cid = SLSMainConnectionID();
   events_register(cid);
   SLSWindowManagementBridgeSetDelegate(NULL);
@@ -151,7 +153,6 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
-  table_init(&g_windows, 1024, hash_windows, cmp_windows);
   windows_add_existing_windows(&g_windows);
 
   mach_server_begin(&g_mach_server, message_handler);

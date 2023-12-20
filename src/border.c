@@ -220,7 +220,7 @@ void border_draw(struct border* border) {
   SLSMoveWindow(cid, border->wid, &origin);
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
-  SLSOrderWindow(cid, border->wid, -1, border->target_wid);
+  SLSOrderWindow(cid, border->wid, BORDER_ORDER, border->target_wid);
   SLSReenableUpdate(cid);
 }
 
@@ -231,13 +231,13 @@ void border_hide(struct border* border) {
 }
 
 void border_unhide(struct border* border) {
+  int cid = SLSMainConnectionID();
   if (border->disable
-      || !is_space_visible(SLSMainConnectionID(), border->sid)) {
+      || !is_space_visible(cid, border->sid)) {
     return;
   }
 
   if (border->wid) {
-    SLSOrderWindow(SLSMainConnectionID(), border->wid, -1, border->target_wid);
-  }
-  else border_draw(border);
+    SLSOrderWindow(cid, border->wid, BORDER_ORDER, border->target_wid);
+  } else border_draw(border);
 }

@@ -9,7 +9,7 @@ static bool str_starts_with(char* string, char* prefix) {
   return false;
 }
 
-static bool parse_blacklist(struct table* blacklist, char* token) {
+static bool parse_list(struct table* list, char* token) {
   uint32_t token_len = strlen(token) + 1;
   char copy[token_len];
   memcpy(copy, token, token_len);
@@ -18,10 +18,12 @@ static bool parse_blacklist(struct table* blacklist, char* token) {
   char* cursor = copy;
   bool entry_found = false;
 
-  table_clear(blacklist);
+  table_clear(list);
   while((name = strsep(&cursor, ","))) {
-    _table_add(blacklist, name, strlen(name) + 1, (void*)true);
-    entry_found = true;
+    if (strlen(name) > 0) {
+      _table_add(list, name, strlen(name) + 1, (void*)true);
+      entry_found = true;
+    }
   }
   return entry_found;
 }
@@ -58,6 +60,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
   static char active_color[] = "active_color";
   static char inactive_color[] = "inactive_color";
   static char blacklist[] = "blacklist=";
+  static char whitelist[] = "whitelist=";
 
   uint32_t update_mask = 0;
   for (int i = 0; i < count; i++) {
@@ -73,10 +76,16 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {
-      if (parse_blacklist(&settings->blacklist,
-                          arguments[i] + strlen(blacklist))) {
-        update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
-      }
+      settings->blacklist_enabled = parse_list(&settings->blacklist,
+                                               arguments[i]
+                                               + strlen(blacklist));
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+    }
+    else if (str_starts_with(arguments[i], whitelist)) {
+      settings->whitelist_enabled = parse_list(&settings->whitelist,
+                                               arguments[i]
+                                               + strlen(whitelist));
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;

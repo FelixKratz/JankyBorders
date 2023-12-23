@@ -25,7 +25,9 @@ struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                                     .color =  0x00000000 },
                                .border_width = 4.f,
                                .border_style = BORDER_STYLE_ROUND,
-                               .hidpi = false                                };
+                               .hidpi = false,
+                               .blacklist_enabled = false,
+                               .whitelist_enabled = false                    };
 
 static TABLE_HASH_FUNC(hash_windows) {
   return *(uint32_t *) key;
@@ -114,6 +116,7 @@ int main(int argc, char** argv) {
   }
 
   table_init(&g_settings.blacklist, 64, hash_blacklist, cmp_blacklist);
+  table_init(&g_settings.whitelist, 64, hash_blacklist, cmp_blacklist);
   uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);
   mach_port_t server_port = mach_get_bs_port(BS_NAME);
   if (server_port && update_mask) {

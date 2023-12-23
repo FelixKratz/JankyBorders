@@ -7,11 +7,23 @@
 extern pid_t g_pid;
 extern struct settings g_settings;
 
-static bool window_blacklisted(struct table* blacklist, pid_t pid) {
+static bool window_in_list(struct table* list, pid_t pid) {
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
-  if (table_find(blacklist, pid_name_buffer)) return true;
+  if (table_find(list, pid_name_buffer)) return true;
   return false;
+}
+
+static bool app_allowed(struct settings* settings, pid_t pid) {
+  if (settings->whitelist_enabled
+      && !window_in_list(&settings->whitelist, pid)) {
+    return false;
+  }
+  if (settings->blacklist_enabled
+      && window_in_list(&settings->blacklist, pid)) {
+    return false;
+  }
+  return true;
 }
 
 bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
@@ -22,8 +34,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
   pid_t pid = 0;
   SLSConnectionGetPID(wid_cid, &pid);
-  if (pid == g_pid || window_blacklisted(&g_settings.blacklist, pid))
-    return false;
+  if (pid == g_pid || !app_allowed(&g_settings, pid)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),

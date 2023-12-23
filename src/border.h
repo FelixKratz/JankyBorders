@@ -29,7 +29,11 @@ struct settings {
   char border_style;
   bool hidpi;
 
+  bool blacklist_enabled;
   struct table blacklist;
+
+  bool whitelist_enabled;
+  struct table whitelist;
 };
 
 struct border {

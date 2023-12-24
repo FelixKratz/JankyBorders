@@ -66,7 +66,7 @@ static inline void execute_config_file(const char* name, const char* filename) {
   }
 
   if (!file_setx(path)) {
-    debug("Failed to make config at '%s' executable...\n", path);
+    printf("[!] Failed to make config at '%s' executable...\n", path);
     return;
   }
 

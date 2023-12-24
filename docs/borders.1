@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2023-12-13"
+.TH "borders" "1" "2023-12-24"
 .P
 .SH NAME
 .P
@@ -56,6 +56,12 @@ If set to \fIon\fR, the border will be drawn with retina resolution.\&
 The applications specified here are excluded from being bordered.\& For
 example, blacklist="Safari,kitty" excludes Safari and kitty from being
 bordered.\&
+.P
+.RE
+\fBwhitelist=<application_list>\fR
+.RS 4
+Once this list is populated, only applications listed here are considered
+for receiving a border.\& If the whitelist is empty (default) it is inactive.\&
 .P
 .RE
 If an instance of \fBborders\fR is already running, subsequent invocations will

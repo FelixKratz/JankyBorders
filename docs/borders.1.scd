@@ -39,6 +39,10 @@ API, thereby being faster than comparable tools.
 	example, blacklist="Safari,kitty" excludes Safari and kitty from being
 	bordered.
 
+*whitelist=<application_list>*
+	Once this list is populated, only applications listed here are considered
+	for receiving a border. If the whitelist is empty (default) it is inactive.
+
 If an instance of *borders* is already running, subsequent invocations will
 update the existing process with the new arguments.
 

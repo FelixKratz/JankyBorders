@@ -57,12 +57,17 @@ static inline void execute_config_file(const char* name, const char* filename) {
   uint32_t size = strlen(home) + strlen(name) + strlen(filename) + 256;
   char path[size];
   snprintf(path, size, "%s/.config/%s/%s", home, name, filename);
-  if (!file_exists(path) || !file_setx(path)) {
+  if (!file_exists(path)) {
     snprintf(path, size, "%s/.%s", home, filename);
-    if (!file_exists(path) || !file_setx(path)) {
+    if (!file_exists(path)) {
       debug("No config file found...\n");
       return;
     };
+  }
+
+  if (!file_setx(path)) {
+    debug("Failed to make config at '%s' executable...\n", path);
+    return;
   }
 
   int pid = fork();

@@ -5,7 +5,6 @@
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
 #define BORDER_PADDING 8.0
-#define BORDER_ORDER -1
 
 struct gradient {
   enum { TL_TO_BR, TR_TO_BL } direction;
@@ -28,6 +27,7 @@ struct settings {
   float border_width;
   char border_style;
   bool hidpi;
+  int border_order;
 
   bool blacklist_enabled;
   struct table blacklist;

@@ -26,6 +26,7 @@ struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                .border_width = 4.f,
                                .border_style = BORDER_STYLE_ROUND,
                                .hidpi = false,
+                               .border_order = -1,
                                .blacklist_enabled = false,
                                .whitelist_enabled = false                    };
 

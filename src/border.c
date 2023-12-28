@@ -36,7 +36,7 @@ void border_move(struct border* border) {
 
 void border_draw(struct border* border) {
   static const float border_radius = 9.f;
-  static const float inner_border_radius = 12.f;
+  static const float inner_border_radius = 10.f;
 
   int cid = SLSMainConnectionID();
   if (!is_space_visible(cid, border->sid)) return;
@@ -220,7 +220,11 @@ void border_draw(struct border* border) {
   SLSMoveWindow(cid, border->wid, &origin);
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
-  SLSOrderWindow(cid, border->wid, BORDER_ORDER, border->target_wid);
+  SLSOrderWindow(cid,
+                 border->wid,
+                 g_settings.border_order,
+                 border->target_wid      );
+
   SLSReenableUpdate(cid);
 }
 
@@ -238,6 +242,10 @@ void border_unhide(struct border* border) {
   }
 
   if (border->wid) {
-    SLSOrderWindow(cid, border->wid, BORDER_ORDER, border->target_wid);
+    SLSOrderWindow(cid,
+                   border->wid,
+                   g_settings.border_order,
+                   border->target_wid      );
+
   } else border_draw(border);
 }

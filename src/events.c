@@ -54,6 +54,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_REORDER) {
     debug("Window Reorder: %d\n", wid);
+    windows_window_update(windows, wid);
 
     // The update of the front window might not have taken place yet...
     usleep(10000);
@@ -68,7 +69,6 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
         windows_window_focus(windows, front_wid);
       }
     }
-    windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);

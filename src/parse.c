@@ -62,6 +62,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
   static char blacklist[] = "blacklist=";
   static char whitelist[] = "whitelist=";
 
+  char order = 'a';
   uint32_t update_mask = 0;
   for (int i = 0; i < count; i++) {
     if (str_starts_with(arguments[i], active_color)) {
@@ -88,6 +89,11 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+    }
+    else if (sscanf(arguments[i], "order=%c", &order) == 1) {
+      if (order == 'a') settings->border_order = 1;
+      else settings->border_order = -1;
       update_mask |= BORDER_UPDATE_MASK_ALL;
     }
     else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {

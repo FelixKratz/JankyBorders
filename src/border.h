@@ -4,6 +4,7 @@
 
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
+#define BORDER_FORCE_SQUARE 'f'
 #define BORDER_PADDING 8.0
 
 struct gradient {

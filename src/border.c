@@ -155,16 +155,20 @@ void border_draw(struct border* border) {
 
     CGMutablePathRef clip_path = CGPathCreateMutable();
     CGPathAddRect(clip_path, NULL, frame);
-    CGPathAddRoundedRect(clip_path,
-                         NULL,
-                         CGRectInset(path_rect, 1.0, 1.0),
-                         inner_border_radius,
-                         inner_border_radius              );
+    if(g_settings.border_style != BORDER_FORCE_SQUARE) {
+        CGPathAddRoundedRect(clip_path,
+                             NULL,
+                             CGRectInset(path_rect, 1.0, 1.0),
+                             inner_border_radius,
+                             inner_border_radius              );
+    } else {
+        CGPathAddRect(clip_path, NULL, CGRectInset(path_rect, 1.0, 1.0));
+    }
 
     CGContextAddPath(border->context, clip_path);
     CGContextEOClip(border->context);
 
-    if (g_settings.border_style == BORDER_STYLE_SQUARE) {
+    if (g_settings.border_style == BORDER_STYLE_SQUARE || g_settings.border_style == BORDER_FORCE_SQUARE) {
       CGRect square_rect = CGRectInset(path_rect,
                                        -g_settings.border_width / 2.f,
                                        -g_settings.border_width / 2.f );

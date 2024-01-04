@@ -267,7 +267,7 @@ static inline uint32_t window_create(int cid, CGRect frame, bool hidpi) {
   CFRelease(frame_region);
 
   uint32_t wid = id;
-  uint64_t set_tags = 1ULL << 1;
+  uint64_t set_tags = 1ULL << 1 | 1ULL << 9;
   uint64_t clear_tags = 0;
 
   SLSSetWindowResolution(cid, wid, hidpi ? 2.0f : 1.0f);

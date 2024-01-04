@@ -152,14 +152,23 @@ void border_draw(struct border* border) {
     CGContextClearRect(border->context, frame);
 
     CGRect path_rect = window_frame;
-
     CGMutablePathRef clip_path = CGPathCreateMutable();
     CGPathAddRect(clip_path, NULL, frame);
-    CGPathAddRoundedRect(clip_path,
-                         NULL,
-                         CGRectInset(path_rect, 1.0, 1.0),
-                         inner_border_radius,
-                         inner_border_radius              );
+
+    if (g_settings.border_style == BORDER_STYLE_SQUARE
+        && g_settings.border_order == BORDER_ORDER_ABOVE
+        && g_settings.border_width >= BORDER_TSMW) {
+      // Inset the frame to overlap the rounding of macOS windows to create a
+      // truly square border
+      path_rect = CGRectInset(window_frame, BORDER_TSMN, BORDER_TSMN);
+      CGPathAddRect(clip_path, NULL, path_rect);
+    } else {
+      CGPathAddRoundedRect(clip_path,
+                           NULL,
+                           CGRectInset(path_rect, 1.0, 1.0),
+                           inner_border_radius,
+                           inner_border_radius              );
+    }
 
     CGContextAddPath(border->context, clip_path);
     CGContextEOClip(border->context);

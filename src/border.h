@@ -2,9 +2,13 @@
 #include "helpers.h"
 #include "hashtable.h"
 
+#define BORDER_ORDER_ABOVE 1
+#define BORDER_ORDER_BELOW -1
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
 #define BORDER_PADDING 8.0
+#define BORDER_TSMN 3.27f
+#define BORDER_TSMW 8.f
 
 struct gradient {
   enum { TL_TO_BR, TR_TO_BL } direction;

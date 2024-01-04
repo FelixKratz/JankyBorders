@@ -92,8 +92,8 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       update_mask |= BORDER_UPDATE_MASK_ALL;
     }
     else if (sscanf(arguments[i], "order=%c", &order) == 1) {
-      if (order == 'a') settings->border_order = 1;
-      else settings->border_order = -1;
+      if (order == 'a') settings->border_order = BORDER_ORDER_ABOVE;
+      else settings->border_order = BORDER_ORDER_BELOW;
       update_mask |= BORDER_UPDATE_MASK_ALL;
     }
     else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {

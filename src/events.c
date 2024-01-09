@@ -1,6 +1,7 @@
 #include "events.h"
 #include "windows.h"
 #include "border.h"
+#include "misc/window.h"
 
 extern struct table g_windows;
 extern pid_t g_pid;

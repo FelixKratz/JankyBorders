@@ -1,3 +1,4 @@
+#pragma once
 #include <CoreGraphics/CoreGraphics.h>
 
 extern int SLSMainConnectionID();

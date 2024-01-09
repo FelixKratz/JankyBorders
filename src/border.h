@@ -1,5 +1,6 @@
 #pragma once
-#include "helpers.h"
+#include "misc/helpers.h"
+#include "misc/window.h"
 #include "hashtable.h"
 
 #define BORDER_ORDER_ABOVE 1

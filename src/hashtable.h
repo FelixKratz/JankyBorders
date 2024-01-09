@@ -1,5 +1,4 @@
-#ifndef HASHTABLE_H
-#define HASHTABLE_H
+#pragma once
 
 #define TABLE_HASH_FUNC(name) unsigned long name(void* key)
 typedef TABLE_HASH_FUNC(table_hash_func);
@@ -31,5 +30,3 @@ void table_clear(struct table* table);
 void _table_add(struct table* table, void* key, int key_size, void* value);
 void table_remove(struct table* table, void* key);
 void* table_find(struct table* table, void* key);
-
-#endif

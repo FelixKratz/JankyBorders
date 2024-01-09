@@ -1,5 +1,4 @@
 #pragma once
-#include "extern.h"
 
 #define EVENT_WINDOW_UPDATE  723
 

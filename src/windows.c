@@ -48,7 +48,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
     CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
     if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
       if (SLSWindowIteratorAdvance(iterator)) {
-        ITERATOR_WINDOW_SUITABLE(iterator, {
+        if (window_suitable(iterator)) {
           struct border* border = table_find(windows, &wid);
           if (!border) {
             border = malloc(sizeof(struct border));
@@ -62,7 +62,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
           border->needs_redraw = true;
           border_draw(border);
           windows_update_notifications(windows);
-        });
+        }
       }
     }
     if (iterator) CFRelease(iterator);
@@ -254,7 +254,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
       if (iterator) {
         while(SLSWindowIteratorAdvance(iterator)) {
-          ITERATOR_WINDOW_SUITABLE(iterator, {
+          if (window_suitable(iterator)) {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
             struct border* border = table_find(windows, &wid);
             if (border) border_draw(border);
@@ -262,7 +262,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
               debug("Creating Missing Window: %d\n", wid);
               windows_window_create(windows, wid, window_space_id(cid, wid));
             }
-          });
+          }
         }
       }
       CFRelease(query);
@@ -325,10 +325,10 @@ void windows_add_existing_windows(struct table* windows) {
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
 
       while (SLSWindowIteratorAdvance(iterator)) {
-        ITERATOR_WINDOW_SUITABLE(iterator, {
+        if (window_suitable(iterator)) {
           uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
           windows_window_create(windows, wid, window_space_id(cid, wid));
-        });
+        }
       }
 
       windows_update_notifications(windows);

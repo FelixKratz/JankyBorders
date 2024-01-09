@@ -1,125 +1,20 @@
-#include "extern.h"
-#include "sys/stat.h"
-#include "ApplicationServices/ApplicationServices.h"
+#pragma once
+#include "helpers.h"
+#include "space.h"
 
-#define ITERATOR_WINDOW_SUITABLE(iterator, code) { \
-  uint64_t tags = SLSWindowIteratorGetTags(iterator); \
-  uint64_t attributes = SLSWindowIteratorGetAttributes(iterator); \
-  uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator); \
-  if (((parent_wid == 0) \
-        && ((attributes & 0x2) \
-          || (tags & 0x400000000000000)) \
-        && (((tags & 0x1)) \
-          || ((tags & 0x2) \
-            && (tags & 0x80000000))))) { \
-    code \
-  } \
-}
-
-static inline void debug(const char* message, ...) {
-#ifdef DEBUG
-  va_list va;
-  va_start(va, message);
-  vprintf(message, va);
-  va_end(va);
-#endif
-}
-
-static inline void error(const char* message, ...) {
-  va_list va;
-  va_start(va, message);
-  vfprintf(stderr, message, va);
-  va_end(va);
-  exit(EXIT_FAILURE);
-}
-
-static inline bool file_exists(const char* filename) {
-  struct stat buffer;
-  if (stat(filename, &buffer) != 0) return false;
-  if (buffer.st_mode & S_IFDIR) return false;
-  return true;
-}
-
-static inline bool file_setx(const char* filename) {
-  struct stat buffer;
-  if (stat(filename, &buffer) != 0) return false;
-  bool is_executable = buffer.st_mode & S_IXUSR;
-  if (!is_executable && chmod(filename, S_IXUSR | buffer.st_mode) != 0) {
-    return false;
+static inline bool window_suitable(CFTypeRef iterator) {
+  uint64_t tags = SLSWindowIteratorGetTags(iterator);
+  uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);
+  uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator);
+  if (((parent_wid == 0)
+        && ((attributes & 0x2)
+          || (tags & 0x400000000000000))
+        && (((tags & 0x1))
+          || ((tags & 0x2)
+            && (tags & 0x80000000))))) {
+    return true;
   }
-  return true;
-}
-
-static inline void execute_config_file(const char* name, const char* filename) {
-  char *home = getenv("HOME");
-  if (!home) return;
-
-  uint32_t size = strlen(home) + strlen(name) + strlen(filename) + 256;
-  char path[size];
-  snprintf(path, size, "%s/.config/%s/%s", home, name, filename);
-  if (!file_exists(path)) {
-    snprintf(path, size, "%s/.%s", home, filename);
-    if (!file_exists(path)) {
-      debug("No config file found...\n");
-      return;
-    };
-  }
-
-  if (!file_setx(path)) {
-    printf("[!] Failed to make config at '%s' executable...\n", path);
-    return;
-  }
-
-  int pid = fork();
-  if (pid !=  0) return;
-
-  alarm(60);
-  char* exec[] = { "/usr/bin/env", "sh", "-c", path, NULL };
-  exit(execvp(exec[0], exec));
-}
-
-static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int count, CFNumberType type) {
-  CFNumberRef temp[count];
-
-  for (int i = 0; i < count; ++i) {
-    temp[i] = CFNumberCreate(NULL, type, ((char *)values) + (size * i));
-  }
-
-  CFArrayRef result = CFArrayCreate(NULL,
-                                    (const void **)temp,
-                                    count,
-                                    &kCFTypeArrayCallBacks);
-
-  for (int i = 0; i < count; ++i) CFRelease(temp[i]);
-
-  return result;
-}
-
-static inline uint64_t get_active_space_id(int cid) {
-  uint32_t count;
-  CGGetActiveDisplayList(0, NULL, &count);
-
-  CFStringRef uuid_ref;
-  if (count == 1) {
-    uint32_t did = 0;
-    uint32_t count = 0;
-    CGGetActiveDisplayList(1, &did, &count);
-    if (count == 1) {
-      CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(did);
-      uuid_ref = CFUUIDCreateString(NULL, uuid);
-      CFRelease(uuid);
-    }
-    else {
-      printf("[!] ERROR (id): No active display detected!\n");
-      return 0;
-    }
-  } else {
-    uuid_ref = SLSCopyActiveMenuBarDisplayIdentifier(cid);
-  }
-
-  uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid_ref);
-  CFRelease(uuid_ref);
-  return sid;
+  return false;
 }
 
 static inline uint32_t get_front_window(int cid) {
@@ -153,10 +48,10 @@ static inline uint32_t get_front_window(int cid) {
         CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
         if (iterator && SLSWindowIteratorGetCount(iterator) > 0) {
           while (SLSWindowIteratorAdvance(iterator)) {
-            ITERATOR_WINDOW_SUITABLE(iterator, {
-                wid = SLSWindowIteratorGetWindowID(iterator);
-                break;
-            });
+            if (window_suitable(iterator)) {
+              wid = SLSWindowIteratorGetWindowID(iterator);
+              break;
+            }
           }
         }
         if (iterator) CFRelease(iterator);
@@ -169,22 +64,6 @@ static inline uint32_t get_front_window(int cid) {
   }
   CFRelease(space_list_ref);
   return wid;
-}
-
-static inline bool is_space_visible(int cid, uint64_t sid) {
-  CFArrayRef displays = SLSCopyManagedDisplays(cid);
-  uint32_t space_count = CFArrayGetCount(displays);
-
-  for (int i = 0; i < space_count; i++) {
-    if (sid == SLSManagedDisplayGetCurrentSpace(cid,
-                           (CFStringRef)CFArrayGetValueAtIndex(displays, i))) {
-      CFRelease(displays);
-      return true;
-    }
-  }
-
-  CFRelease(displays);
-  return false;
 }
 
 static inline uint64_t window_space_id(int cid, uint32_t wid) {
@@ -267,7 +146,7 @@ static inline uint32_t window_create(int cid, CGRect frame, bool hidpi) {
   CFRelease(frame_region);
 
   uint32_t wid = id;
-  uint64_t set_tags = 1ULL << 1 | 1ULL << 9;
+  uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
   uint64_t clear_tags = 0;
 
   SLSSetWindowResolution(cid, wid, hidpi ? 2.0f : 1.0f);

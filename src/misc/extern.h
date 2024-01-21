@@ -30,8 +30,8 @@ extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relative
 extern CGError SLSSetWindowLevel(int cid, uint32_t wid, int level);
 extern CGError SLSSetWindowSubLevel(int cid, uint32_t wid, int level);
 extern CGError SLSWindowSetShadowProperties(uint32_t wid, CFDictionaryRef properties);
-extern CGError SLSGetWindowLevel(int cid, uint32_t wid, int* out_level);
-extern CGError SLSGetWindowSubLevel(int cid, uint32_t wid, int* out_level);
+extern CGError SLSGetWindowLevel(int cid, uint32_t wid, int64_t* level_out);
+extern uint64_t SLSGetWindowSubLevel(int cid, uint32_t wid);
 extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
 extern CGError SLSMoveWindow(int cid, uint32_t wid, CGPoint* point);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);

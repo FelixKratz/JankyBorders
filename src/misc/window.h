@@ -145,12 +145,22 @@ static inline int32_t window_sub_level(uint32_t wid) {
                                  MACH_MSG_TIMEOUT_NONE,
                                  MACH_PORT_NULL                         );
   
-  int32_t sub_level = msg.response.sub_level;
-  mach_msg_destroy(&msg.info.header);
+  if (error != KERN_SUCCESS) {
+    printf("SubLevel: Error receiving message.\n");
+    mig_dealloc_special_reply_port(msg.info.header.msgh_local_port);
+    return 0;
+  }
 
-  if (error != KERN_SUCCESS) { printf("Whoops\n"); return 0; }
+  if (msg.info.header.msgh_id != 0x7427
+     || msg.info.header.msgh_size != 0x28
+     || msg.info.header.msgh_remote_port != 0
+     || msg.payload.wid != 0                 ) {
+    printf("SubLevel: Invalid message received\n");
+    mach_msg_destroy(&msg.info.header);
+    return 0;
+  }
 
-  return sub_level;
+  return msg.response.sub_level;
 }
 
 static inline int window_level(int cid, uint32_t wid) {

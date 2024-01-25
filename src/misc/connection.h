@@ -56,5 +56,21 @@ mach_port_t create_connection_server_port() {
                                  0,
                                  0                          );
 
+  if (error != KERN_SUCCESS) {
+    printf("Connection: Error receiving message\n");
+    mig_dealloc_special_reply_port(msg.header.msgh_local_port);
+    return 0;
+  }
+
+  if (msg.header.msgh_id != 0x74cc
+      || msg.header.msgh_size != 0x40
+      || msg.magic1 != 2
+      || !(msg.magic2 & 0x110000)
+      || !(msg.magic3 & 0x110000)) {
+    printf("Connection: Wrong message received.\n");
+    mach_msg_destroy(&msg.header);
+    return 0;
+  }
+
   return msg.server_port;
 }

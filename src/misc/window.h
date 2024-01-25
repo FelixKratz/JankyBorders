@@ -102,6 +102,57 @@ static inline uint64_t window_space_id(int cid, uint32_t wid) {
   return 0;
 }
 
+extern mach_port_t g_server_port;
+static inline int32_t window_sub_level(uint32_t wid) {
+  #pragma pack(push,2)
+  struct {
+    struct {
+      mach_msg_header_t header;
+      NDR_record_t NDR_record;
+    } info;
+
+    struct {
+      int32_t wid;
+    } payload;
+
+    struct {
+      int32_t sub_level;
+      int64_t padding;
+    } response;
+  } msg = { 0 };
+  #pragma pack(pop)
+
+  msg.info.NDR_record = NDR_record;
+  msg.info.header.msgh_remote_port = g_server_port;
+  msg.info.header.msgh_local_port = mig_get_special_reply_port();
+  msg.info.header.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND,
+                                                 MACH_MSG_TYPE_MAKE_SEND_ONCE,
+                                                 0,
+                                                 MACH_MSGH_BITS_REMOTE_MASK  );
+
+  msg.info.header.msgh_id = 0x73c3;
+  msg.payload.wid = wid;
+
+  kern_return_t error = mach_msg(&msg.info.header,
+                                 MACH_SEND_MSG
+                                 | MACH_SEND_SYNC_OVERRIDE
+                                 | MACH_SEND_PROPAGATE_QOS
+                                 | MACH_RCV_MSG
+                                 | MACH_RCV_SYNC_WAIT,
+                                 sizeof(msg.info) + sizeof(msg.payload),
+                                 sizeof(msg),
+                                 msg.info.header.msgh_local_port,
+                                 MACH_MSG_TIMEOUT_NONE,
+                                 MACH_PORT_NULL                         );
+  
+  int32_t sub_level = msg.response.sub_level;
+  mach_msg_destroy(&msg.info.header);
+
+  if (error != KERN_SUCCESS) { printf("Whoops\n"); return 0; }
+
+  return sub_level;
+}
+
 static inline int window_level(int cid, uint32_t wid) {
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),

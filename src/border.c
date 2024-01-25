@@ -89,10 +89,7 @@ void border_draw(struct border* border) {
   }
 
   int level = window_level(cid, border->target_wid);
-
-  // NOTE: This function only works properly if screen recording permissions
-  // are granted.
-  int64_t sub_level = SLSGetWindowSubLevel(cid, border->target_wid);
+  int sub_level = window_sub_level(border->target_wid);
 
   if (border->needs_redraw) {
     CGContextSaveGState(border->context);

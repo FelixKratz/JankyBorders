@@ -4,6 +4,7 @@
 #include "windows.h"
 #include "mach.h"
 #include "parse.h"
+#include "misc/connection.h"
 #include <stdio.h>
 
 #define VERSION_OPT_LONG "--version"
@@ -17,6 +18,7 @@
 #define PATCH 3
 
 pid_t g_pid;
+mach_port_t g_server_port;
 struct table g_windows;
 struct mach_server g_mach_server;
 struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
@@ -131,6 +133,8 @@ int main(int argc, char** argv) {
 
   pid_for_task(mach_task_self(), &g_pid);
   table_init(&g_windows, 1024, hash_windows, cmp_windows);
+
+  g_server_port = create_connection_server_port();
 
   int cid = SLSMainConnectionID();
   events_register(cid);

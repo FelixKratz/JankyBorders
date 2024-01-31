@@ -146,7 +146,7 @@ void windows_window_update(struct table* windows, uint32_t wid) {
   if (border) border_draw(border);
 }
 
-bool windows_window_focus(struct table* windows, uint32_t wid) {
+static bool windows_window_focus(struct table* windows, uint32_t wid) {
   bool found_window = false;
   for (int window_index = 0; window_index < windows->capacity; ++window_index) {
     struct bucket* bucket = windows->buckets[window_index];
@@ -217,6 +217,19 @@ void windows_update_notifications(struct table* windows) {
 
   int cid = SLSMainConnectionID();
   SLSRequestNotificationsForWindows(cid, window_list, window_count);
+}
+
+void windows_determine_and_focus_active_window(struct table* windows) {
+  int cid = SLSMainConnectionID();
+  uint32_t front_wid = get_front_window(cid);
+  if (!windows_window_focus(windows, front_wid)) {
+    debug("Taking slow window focus path: %d\n", front_wid);
+    if (front_wid && windows_window_create(windows,
+                                           front_wid,
+                                           window_space_id(cid, front_wid))) {
+      windows_window_focus(windows, front_wid);
+    }
+  }
 }
 
 void windows_draw_borders_on_current_spaces(struct table* windows) {

@@ -15,4 +15,6 @@
 
 #define EVENT_SPACE_CHANGE   1401
 
+#define EVENT_FRONT_CHANGE   1508
+
 void events_register(int cid);

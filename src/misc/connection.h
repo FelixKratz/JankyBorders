@@ -40,7 +40,6 @@ mach_port_t create_connection_server_port() {
   msg.magic2 = 0x110000;
   msg.magic3 = 0x110000;
 
-  memset(msg.bundle_name, 0, sizeof(msg.bundle_name));
   snprintf(msg.bundle_name, sizeof(msg.bundle_name), "borders");
   msg.bundle_size = sizeof(msg.bundle_name);
 

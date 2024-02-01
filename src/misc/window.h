@@ -2,16 +2,20 @@
 #include "helpers.h"
 #include "space.h"
 
+#define WINDOW_TAG_DOCUMENT (1ULL << 0)
+#define WINDOW_TAG_FLOATING (1ULL << 1)
+#define WINDOW_TAG_ATTACHED (1ULL << 7)
+#define WINDOW_TAG_MODAL    (1ULL << 31)
+
 static inline bool window_suitable(CFTypeRef iterator) {
   uint64_t tags = SLSWindowIteratorGetTags(iterator);
   uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);
   uint32_t parent_wid = SLSWindowIteratorGetParentID(iterator);
-  if (((parent_wid == 0)
-        && ((attributes & 0x2)
-          || (tags & 0x400000000000000))
-        && (((tags & 0x1))
-          || ((tags & 0x2)
-            && (tags & 0x80000000))))) {
+  if ((parent_wid == 0)
+       && ((attributes & 0x2) || (tags & 0x400000000000000))
+       && !(tags & WINDOW_TAG_ATTACHED)
+       && ((tags & WINDOW_TAG_DOCUMENT) || ((tags & WINDOW_TAG_FLOATING)
+                                            && (tags & WINDOW_TAG_MODAL)))) {
     return true;
   }
   return false;

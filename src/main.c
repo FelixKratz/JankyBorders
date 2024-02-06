@@ -15,7 +15,7 @@
 
 #define MAJOR 1
 #define MINOR 4
-#define PATCH 1
+#define PATCH 2
 
 pid_t g_pid;
 mach_port_t g_server_port;

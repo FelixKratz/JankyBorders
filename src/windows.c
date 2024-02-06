@@ -277,6 +277,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
             }
           }
         }
+        CFRelease(iterator);
       }
       CFRelease(query);
     }

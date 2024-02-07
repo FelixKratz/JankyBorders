@@ -14,7 +14,8 @@ mach_port_t create_connection_server_port() {
     int64_t padding2;
 
     int64_t magic3;
-    int64_t padding3;
+    int32_t padding3;
+    int32_t cid;
 
     int32_t bundle_size;
     char bundle_name[0x8];

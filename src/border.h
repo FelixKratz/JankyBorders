@@ -30,8 +30,10 @@ struct settings {
   struct color_style inactive_window;
 
   float border_width;
+  float blur_radius;
   char border_style;
   bool hidpi;
+  bool show_background;
   int border_order;
 
   bool blacklist_enabled;

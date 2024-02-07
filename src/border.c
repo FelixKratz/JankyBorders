@@ -161,7 +161,7 @@ void border_draw(struct border* border) {
       // truly square border
       path_rect = CGRectInset(window_frame, BORDER_TSMN, BORDER_TSMN);
       CGPathAddRect(clip_path, NULL, path_rect);
-    } else {
+    } else if ( !g_settings.show_background ) {
       CGPathAddRoundedRect(clip_path,
                            NULL,
                            CGRectInset(path_rect, 1.0, 1.0),
@@ -204,6 +204,10 @@ void border_draw(struct border* border) {
       if (color_style.stype == COLOR_STYLE_SOLID
          || color_style.stype == COLOR_STYLE_GLOW) {
         CGContextStrokePath(border->context);
+        if (g_settings.show_background) {
+          CGContextAddPath(border->context, stroke_path);
+          CGContextFillPath(border->context);
+        }
       }
       else if (color_style.stype == COLOR_STYLE_GRADIENT) {
         CGContextReplacePathWithStrokedPath(border->context);
@@ -232,6 +236,7 @@ void border_draw(struct border* border) {
                  border->wid,
                  g_settings.border_order,
                  border->target_wid      );
+  SLSSetWindowBackgroundBlurRadius(cid, border->wid, g_settings.blur_radius);
 
   SLSReenableUpdate(cid);
 }

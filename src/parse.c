@@ -104,6 +104,14 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
     } else if (strcmp(arguments[i], "hidpi=off") == 0) {
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = false;
+    } else if (strcmp(arguments[i], "show_background=on") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->show_background = true;
+    } else if (strcmp(arguments[i], "show_background=off") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->show_background = false;
+    } else if (sscanf(arguments[i], "blur_radius=%f", &settings->blur_radius) == 1) {
+      update_mask |= BORDER_UPDATE_MASK_ALL;
     } else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
     }

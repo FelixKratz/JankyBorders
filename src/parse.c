@@ -80,7 +80,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       if (parse_color(&settings->background,
                                  arguments[i] + strlen(background_color))) {
         update_mask |= BORDER_UPDATE_MASK_ALL;
-        settings->show_background = true;
+        settings->show_background = settings->background.color & 0xff000000;
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {

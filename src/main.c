@@ -20,11 +20,14 @@
 pid_t g_pid;
 mach_port_t g_server_port;
 struct table g_windows;
+struct table g_animation_proxies;
 struct mach_server g_mach_server;
 struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                                   .color = 0xffe1e3e4 },
                                .inactive_window = { .stype = COLOR_STYLE_SOLID,
                                                     .color =  0x00000000 },
+                               .background = { .stype = COLOR_STYLE_SOLID,
+                                               .color = 0x00000000         },
                                .border_width = 4.f,
                                .blur_radius = 0,
                                .border_style = BORDER_STYLE_ROUND,
@@ -135,6 +138,7 @@ int main(int argc, char** argv) {
 
   pid_for_task(mach_task_self(), &g_pid);
   table_init(&g_windows, 1024, hash_windows, cmp_windows);
+  table_init(&g_animation_proxies, 1024, hash_windows, cmp_windows);
 
   g_server_port = create_connection_server_port();
 

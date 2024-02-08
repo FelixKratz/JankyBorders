@@ -47,6 +47,7 @@ struct settings {
 struct border {
   bool focused;
   bool needs_redraw;
+  bool too_small;
   bool disable;
 
   uint64_t sid;

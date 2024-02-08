@@ -1,26 +1,26 @@
 #include "windows.h"
 #include "hashtable.h"
 #include "border.h"
+#include "misc/yabai.h"
 #include <string.h>
 #include <libproc.h>
 
 extern pid_t g_pid;
+extern struct table g_animation_proxies;
 extern struct settings g_settings;
 
-static bool window_in_list(struct table* list, pid_t pid) {
-  static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
-  proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
-  if (table_find(list, pid_name_buffer)) return true;
+static bool window_in_list(struct table* list, char* app_name) {
+  if (table_find(list, app_name)) return true;
   return false;
 }
 
-static bool app_allowed(struct settings* settings, pid_t pid) {
+static bool app_allowed(struct settings* settings, char* app_name) {
   if (settings->whitelist_enabled
-      && !window_in_list(&settings->whitelist, pid)) {
+      && !window_in_list(&settings->whitelist, app_name)) {
     return false;
   }
   if (settings->blacklist_enabled
-      && window_in_list(&settings->blacklist, pid)) {
+      && window_in_list(&settings->blacklist, app_name)) {
     return false;
   }
   return true;
@@ -34,7 +34,15 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
   pid_t pid = 0;
   SLSConnectionGetPID(wid_cid, &pid);
-  if (pid == g_pid || !app_allowed(&g_settings, pid)) return false;
+  static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
+  proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
+
+  #ifdef _YABAI_INTEGRATION
+  if (strcmp(pid_name_buffer, "yabai") == 0)
+   check_yabai_proxy_begin(windows, &g_animation_proxies, cid, wid_cid, wid);
+  #endif
+
+  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),
@@ -190,6 +198,10 @@ void windows_window_unhide(struct table* windows, uint32_t wid) {
 }
 
 bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
+  #ifdef _YABAI_INTEGRATION
+  check_yabai_proxy_end(windows, &g_animation_proxies, wid);
+  #endif
+
   struct border* border = table_find(windows, &wid);
   if (border && border->sid == sid) {
     table_remove(windows, &wid);

@@ -45,6 +45,7 @@ extern CGError SLSReenableUpdate(int cid);
 
 extern OSStatus _SLPSGetFrontProcess(ProcessSerialNumber *psn);
 extern CGError SLSGetConnectionIDForPSN(int cid, ProcessSerialNumber *psn, int *psn_cid);
+extern CGError SLSCopyConnectionProperty(int cid, int target_cid, CFStringRef key, CFTypeRef* value);
 
 extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces, uint32_t options, uint64_t *set_tags, uint64_t *clear_tags);
 

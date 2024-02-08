@@ -35,6 +35,8 @@ void border_move(struct border* border) {
 }
 
 void border_draw(struct border* border) {
+  if (border->disable) return;
+
   static const float border_radius = 9.f;
   static const float inner_border_radius = 10.f;
 
@@ -53,11 +55,11 @@ void border_draw(struct border* border) {
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
       || smallest_rect.size.height < 2.f * inner_border_radius) {
-    border->disable = true;
+    border->too_small = true;
     border_hide(border);
     return;
   }
-  border->disable = false;
+  border->too_small = false;
 
   float border_offset = - g_settings.border_width - BORDER_PADDING;
   CGRect frame = CGRectInset(window_frame, border_offset, border_offset);
@@ -259,7 +261,8 @@ void border_hide(struct border* border) {
 
 void border_unhide(struct border* border) {
   int cid = SLSMainConnectionID();
-  if (border->disable
+  if (border->too_small
+      || border->disable
       || !is_space_visible(cid, border->sid)) {
     return;
   }

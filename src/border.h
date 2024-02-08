@@ -28,6 +28,7 @@ struct color_style {
 struct settings {
   struct color_style active_window;
   struct color_style inactive_window;
+  struct color_style background;
 
   float border_width;
   float blur_radius;

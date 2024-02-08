@@ -59,6 +59,7 @@ static bool parse_color(struct color_style* style, char* token) {
 uint32_t parse_settings(struct settings* settings, int count, char** arguments) {
   static char active_color[] = "active_color";
   static char inactive_color[] = "inactive_color";
+  static char background_color[] = "background_color";
   static char blacklist[] = "blacklist=";
   static char whitelist[] = "whitelist=";
 
@@ -74,6 +75,12 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       if (parse_color(&settings->inactive_window,
                                  arguments[i] + strlen(inactive_color))) {
         update_mask |= BORDER_UPDATE_MASK_INACTIVE;
+      }
+    } else  if (str_starts_with(arguments[i], background_color)) {
+      if (parse_color(&settings->background,
+                                 arguments[i] + strlen(background_color))) {
+        update_mask |= BORDER_UPDATE_MASK_ALL;
+        settings->show_background = true;
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {
@@ -104,12 +111,6 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
     } else if (strcmp(arguments[i], "hidpi=off") == 0) {
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = false;
-    } else if (strcmp(arguments[i], "show_background=on") == 0) {
-      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
-      settings->show_background = true;
-    } else if (strcmp(arguments[i], "show_background=off") == 0) {
-      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
-      settings->show_background = false;
     } else if (sscanf(arguments[i], "blur_radius=%f", &settings->blur_radius) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;
     } else {

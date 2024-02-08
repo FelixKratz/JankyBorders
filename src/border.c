@@ -102,11 +102,8 @@ void border_draw(struct border* border) {
     CGPoint gradient_direction[2];
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
-      uint32_t color = color_style.color;
-      float a = ((color_style.color >> 24) & 0xff) / 255.f;
-      float r = ((color_style.color >> 16) & 0xff) / 255.f;
-      float g = ((color_style.color >> 8) & 0xff) / 255.f;
-      float b = ((color_style.color >> 0) & 0xff) / 255.f;
+      float a,r,g,b;
+      colors_from_hex(color_style.color, &a, &r, &g, &b);
       CGContextSetRGBFillColor(border->context, r, g, b, a);
       CGContextSetRGBStrokeColor(border->context, r, g, b, a);
 
@@ -116,15 +113,9 @@ void border_draw(struct border* border) {
         CGColorRelease(color_ref);
       }
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
-      float a1 = ((color_style.gradient.color1 >> 24) & 0xff) / 255.f;
-      float a2 = ((color_style.gradient.color2 >> 24) & 0xff) / 255.f;
-      float r1 = ((color_style.gradient.color1 >> 16) & 0xff) / 255.f;
-      float r2 = ((color_style.gradient.color2 >> 16) & 0xff) / 255.f;
-      float g1 = ((color_style.gradient.color1 >> 8) & 0xff) / 255.f;
-      float g2 = ((color_style.gradient.color2 >> 8) & 0xff) / 255.f;
-      float b1 = ((color_style.gradient.color1 >> 0) & 0xff) / 255.f;
-      float b2 = ((color_style.gradient.color2 >> 0) & 0xff) / 255.f;
-
+      float a1, a2, r1, r2, g1, g2, b1, b2;
+      colors_from_hex(color_style.gradient.color1, &a1, &r1, &g1, &b1);
+      colors_from_hex(color_style.gradient.color2, &a2, &r2, &g2, &b2);
       CGColorRef c[] = { CGColorCreateSRGB(r1, g1, b1, a1),
                          CGColorCreateSRGB(r2, g2, b2, a2) };
       CFArrayRef cfc = CFArrayCreate(NULL,
@@ -152,6 +143,7 @@ void border_draw(struct border* border) {
 
     CGRect path_rect = window_frame;
     CGMutablePathRef clip_path = CGPathCreateMutable();
+    CGMutablePathRef inner_clip_path = CGPathCreateMutable();
     CGPathAddRect(clip_path, NULL, frame);
 
     if (g_settings.border_style == BORDER_STYLE_SQUARE
@@ -160,15 +152,16 @@ void border_draw(struct border* border) {
       // Inset the frame to overlap the rounding of macOS windows to create a
       // truly square border
       path_rect = CGRectInset(window_frame, BORDER_TSMN, BORDER_TSMN);
-      CGPathAddRect(clip_path, NULL, path_rect);
-    } else if ( !g_settings.show_background ) {
-      CGPathAddRoundedRect(clip_path,
+      CGPathAddRect(inner_clip_path, NULL, path_rect);
+    } else {
+      CGPathAddRoundedRect(inner_clip_path,
                            NULL,
                            CGRectInset(path_rect, 1.0, 1.0),
                            inner_border_radius,
                            inner_border_radius              );
     }
 
+    CGPathAddPath(clip_path, NULL, inner_clip_path);
     CGContextAddPath(border->context, clip_path);
     CGContextEOClip(border->context);
 
@@ -222,9 +215,26 @@ void border_draw(struct border* border) {
 
       CFRelease(stroke_path);
     }
-    CFRelease(clip_path);
     CGGradientRelease(gradient);
   
+    if (g_settings.show_background && g_settings.border_order != 1) {
+      CGContextRestoreGState(border->context);
+      CGContextSaveGState(border->context);
+      color_style = g_settings.background;
+      if (color_style.stype == COLOR_STYLE_SOLID
+         || color_style.stype == COLOR_STYLE_GLOW) {
+        uint32_t color = color_style.color;
+        float a,r,g,b;
+        colors_from_hex(color_style.color, &a, &r, &g, &b);
+        CGContextSetRGBFillColor(border->context, r, g, b, a);
+        CGContextSetRGBStrokeColor(border->context, 0, 0, 0, 0);
+
+        CGContextAddPath(border->context, inner_clip_path);
+        CGContextFillPath(border->context);
+      }
+    }
+    CFRelease(clip_path);
+    CFRelease(inner_clip_path);
     CGContextFlush(border->context);
     CGContextRestoreGState(border->context);
   }

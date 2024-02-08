@@ -81,3 +81,10 @@ static inline  CFArrayRef cfarray_of_cfnumbers(void* values, size_t size, int co
 
   return result;
 }
+
+static inline void colors_from_hex(uint32_t hex, float* a, float* r, float* g, float* b) {
+  *a = ((hex >> 24) & 0xff) / 255.f;
+  *r = ((hex >> 16) & 0xff) / 255.f;
+  *g = ((hex >> 8) & 0xff) / 255.f;
+  *b = ((hex >> 0) & 0xff) / 255.f;
+}

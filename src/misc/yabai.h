@@ -22,6 +22,10 @@ static inline uint32_t actual_wid_from_yabai_proxy(int cid, int yabai_cid, uint3
   return result;
 }
 
+static inline bool yabai_proxy_exists(struct table* proxies, uint32_t wid) {
+  return table_find(proxies, &wid);
+}
+
 static inline void check_yabai_proxy_begin(struct table* windows, struct table* proxies, int cid, int yabai_cid, uint32_t wid) {
   uint32_t real_wid = actual_wid_from_yabai_proxy(cid, yabai_cid, wid);
   if (!real_wid) return;

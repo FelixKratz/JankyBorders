@@ -65,6 +65,10 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
             window_created = true;
           }
 
+          #ifdef _YABAI_INTEGRATION
+          border->disable = yabai_proxy_exists(&g_animation_proxies, wid);
+          #endif
+
           border->target_wid = wid;
           border->sid = sid;
           border->needs_redraw = true;

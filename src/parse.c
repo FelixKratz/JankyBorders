@@ -112,6 +112,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = false;
     } else if (sscanf(arguments[i], "blur_radius=%f", &settings->blur_radius) == 1) {
+      if (settings->blur_radius > 30) settings->blur_radius = 30;
       update_mask |= BORDER_UPDATE_MASK_ALL;
     } else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);

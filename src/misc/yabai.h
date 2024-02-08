@@ -26,6 +26,8 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
   uint32_t real_wid = actual_wid_from_yabai_proxy(cid, yabai_cid, wid);
   if (!real_wid) return;
 
+  table_remove(proxies, &real_wid);
+  table_add(proxies, &real_wid, (void*)(intptr_t)wid);
   table_add(proxies, &wid, (void*)(intptr_t)real_wid);
   struct border* border = table_find(windows, &real_wid);
   if (border) {
@@ -38,10 +40,14 @@ static inline void check_yabai_proxy_end(struct table* windows, struct table* pr
   uint32_t real_wid = (intptr_t)table_find(proxies, &wid);
   if (real_wid) {
     table_remove(proxies, &wid);
-    struct border* border = table_find(windows, &real_wid);
-    if (border) {
-      border->disable = false;
-      border_draw(border);
+    uint32_t current_proxy_wid = (intptr_t)table_find(proxies, &real_wid);
+    if (wid == current_proxy_wid) {
+      table_remove(proxies, &real_wid);
+      struct border* border = table_find(windows, &real_wid);
+      if (border) {
+        border->disable = false;
+        border_draw(border);
+      }
     }
   }
 }

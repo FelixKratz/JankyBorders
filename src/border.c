@@ -199,11 +199,6 @@ void border_draw(struct border* border) {
       if (color_style.stype == COLOR_STYLE_SOLID
          || color_style.stype == COLOR_STYLE_GLOW) {
         CGContextStrokePath(border->context);
-        if (g_settings.show_background) {
-          CGContextAddPath(border->context, stroke_path);
-          CGContextFillPath(border->context);
-        }
-      }
       else if (color_style.stype == COLOR_STYLE_GRADIENT) {
         CGContextReplacePathWithStrokedPath(border->context);
         CGContextClip(border->context);

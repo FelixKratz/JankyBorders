@@ -55,6 +55,7 @@ struct border {
   uint32_t target_wid;
 
   CGRect bounds;
+  CGRect target_bounds;
   CGContextRef context;
 };
 

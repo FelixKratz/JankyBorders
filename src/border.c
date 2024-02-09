@@ -20,10 +20,13 @@ void border_destroy(struct border* border) {
 }
 
 void border_move(struct border* border) {
+  if (border->disable) return;
   int cid = SLSMainConnectionID();
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  border->target_bounds = window_frame;
+
   CGPoint origin = { .x = window_frame.origin.x
                           - g_settings.border_width
                           - BORDER_PADDING,
@@ -52,6 +55,8 @@ void border_draw(struct border* border) {
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  border->target_bounds = window_frame;
+
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
       || smallest_rect.size.height < 2.f * inner_border_radius) {
@@ -242,6 +247,10 @@ void border_draw(struct border* border) {
   }
 
   SLSMoveWindow(cid, border->wid, &origin);
+  CGAffineTransform transform = CGAffineTransformIdentity;
+  transform.tx = -origin.x;
+  transform.ty = -origin.y;
+  SLSSetWindowTransform(cid, border->wid, transform);
   SLSSetWindowLevel(cid, border->wid, level);
   SLSSetWindowSubLevel(cid, border->wid, sub_level);
   SLSOrderWindow(cid,

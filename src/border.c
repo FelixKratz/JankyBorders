@@ -199,7 +199,7 @@ void border_draw(struct border* border) {
       if (color_style.stype == COLOR_STYLE_SOLID
          || color_style.stype == COLOR_STYLE_GLOW) {
         CGContextStrokePath(border->context);
-      else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+      } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
         CGContextReplacePathWithStrokedPath(border->context);
         CGContextClip(border->context);
         

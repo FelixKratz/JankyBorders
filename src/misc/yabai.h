@@ -12,12 +12,13 @@ struct track_transform_payload {
   int cid;
   uint32_t border_wid;
   uint32_t target_wid;
-  CGRect border_frame;
-  CGRect target_frame;
+  uint64_t frame_time;
+  float dx, dy;
 };
 
 static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp* now, const CVTimeStamp* output_time, CVOptionFlags flags, CVOptionFlags* flags_out, void* context) {
   struct track_transform_payload* payload = context;
+  usleep(0.25*payload->frame_time);
   CGAffineTransform target_transform = CGAffineTransformIdentity;
   CGAffineTransform border_transform = CGAffineTransformIdentity;
   CGError error = SLSGetWindowTransform(payload->cid,
@@ -32,13 +33,9 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
   }
 
   border_transform = target_transform;
-  float delta_x = payload->border_frame.size.width
-                - payload->target_frame.size.width;
-  float delta_y = payload->border_frame.size.height
-                - payload->target_frame.size.height;
+  border_transform.tx += 0.5*payload->dx;
+  border_transform.ty += 0.5*payload->dy;
 
-  border_transform.tx += 0.5*delta_x;
-  border_transform.ty += 0.5*delta_y;
   SLSSetWindowTransform(payload->cid, payload->border_wid, border_transform);
 
   return kCVReturnSuccess;
@@ -47,6 +44,9 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
 static void border_track_transform(struct track_transform_payload* payload) {
   CVDisplayLinkRef link;
   CVDisplayLinkCreateWithActiveCGDisplays(&link);
+  CVTime refresh_period=CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
+  payload->frame_time = (double)refresh_period.timeValue
+                        / (double)refresh_period.timeScale * 1e6;
   CVDisplayLinkSetOutputCallback(link,
                                  frame_callback,
                                  payload        );
@@ -92,8 +92,11 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
     payload->border_wid = border->wid;
     payload->target_wid = wid;
     payload->cid = cid;
-    payload->border_frame = border->bounds;
-    payload->target_frame = border->target_bounds;
+    payload->dx = border->bounds.size.width
+                  - border->target_bounds.size.width;
+    payload->dy = border->bounds.size.height
+                  - border->target_bounds.size.height;
+
     border->disable = true;
     border_track_transform(payload);
   }

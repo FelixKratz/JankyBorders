@@ -28,6 +28,7 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
     CVDisplayLinkStop(display_link);
     CVDisplayLinkRelease(display_link);
     free(payload);
+    return kCVReturnSuccess;
   }
 
   border_transform = target_transform;

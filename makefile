@@ -1,5 +1,5 @@
 FILES = src/main.c src/parse.c src/mach.c src/hashtable.c src/events.c src/windows.c src/border.c 
-LIBS = -framework AppKit -F/System/Library/PrivateFrameworks/ -framework SkyLight
+LIBS = -framework AppKit -framework CoreVideo -F/System/Library/PrivateFrameworks/ -framework SkyLight
 
 all: | bin
 	clang -std=c99 -O3 -g $(FILES) -o bin/borders $(LIBS)

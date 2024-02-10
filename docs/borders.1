@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2023-12-24"
+.TH "borders" "1" "2024-02-10"
 .P
 .SH NAME
 .P
@@ -38,6 +38,16 @@ instance, active_color=0xff00ff00 creates a green border.\&
 \fBinactive_color=<color>\fR
 .RS 4
 Sets the border color for all windows not in focus.\&
+.P
+.RE
+\fBbackground_color=<color>\fR
+.RS 4
+Sets the background fill color for all windows (only \fI0xAARRGGBB\fR arguments supported).\&
+.P
+.RE
+\fBblur_radius=<float>\fR
+.RS 4
+Sets the blur radius applied to the borders or backgrounds with transparency.\&
 .P
 .RE
 \fBwidth=<float>\fR

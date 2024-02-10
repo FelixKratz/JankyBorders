@@ -13,6 +13,7 @@ struct track_transform_payload {
   uint32_t border_wid;
   uint32_t target_wid;
   uint64_t frame_time;
+  CGAffineTransform initial_transform;
   float dx, dy;
 };
 
@@ -32,7 +33,8 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
     return kCVReturnSuccess;
   }
 
-  border_transform = target_transform;
+  border_transform = CGAffineTransformConcat(target_transform,
+                                             payload->initial_transform);
   border_transform.tx += 0.5*payload->dx;
   border_transform.ty += 0.5*payload->dy;
 
@@ -89,9 +91,19 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
     struct track_transform_payload* payload
                               = malloc(sizeof(struct track_transform_payload));
 
+    CGRect proxy_frame;
+    SLSGetWindowBounds(cid, wid, &proxy_frame);
+
     payload->border_wid = border->wid;
     payload->target_wid = wid;
     payload->cid = cid;
+
+    payload->initial_transform = CGAffineTransformIdentity;
+    payload->initial_transform.a = border->target_bounds.size.width
+                                   / proxy_frame.size.width;
+    payload->initial_transform.d = border->target_bounds.size.height
+                                   / proxy_frame.size.height;
+
     payload->dx = border->bounds.size.width
                   - border->target_bounds.size.width;
     payload->dy = border->bounds.size.height

@@ -41,8 +41,10 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
   return kCVReturnSuccess;
 }
 
-static void border_track_transform(struct track_transform_payload* payload) {
+static inline void border_track_transform(struct track_transform_payload* payload) {
   CVDisplayLinkRef link;
+#if 0
+  // Link to appropriate proxy window display instead of all displays
   CFStringRef uuid = SLSCopyManagedDisplayForWindow(payload->cid,
                                                     payload->target_wid);
 
@@ -57,6 +59,9 @@ static void border_track_transform(struct track_transform_payload* payload) {
     CFRelease(uuid_ref);
   }
   CFRelease(uuid);
+#else
+  CVDisplayLinkCreateWithActiveCGDisplays(&link);
+#endif
 
   CVTime refresh_period=CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
 

@@ -7,8 +7,6 @@
 #define _YABAI_INTEGRATION
 
 struct track_transform_payload {
-  volatile bool stop;
-
   int cid;
   uint32_t border_wid;
   uint32_t target_wid;
@@ -45,14 +43,27 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
 
 static void border_track_transform(struct track_transform_payload* payload) {
   CVDisplayLinkRef link;
-  CVDisplayLinkCreateWithActiveCGDisplays(&link);
+  CFStringRef uuid = SLSCopyManagedDisplayForWindow(payload->cid,
+                                                    payload->target_wid);
+
+  CFUUIDRef uuid_ref = CFUUIDCreateFromString(NULL, uuid);
+  if (!uuid_ref) {
+    CVDisplayLinkCreateWithActiveCGDisplays(&link);
+  } else {
+    uint32_t did = CGDisplayGetDisplayIDFromUUID(uuid_ref);
+    if (CVDisplayLinkCreateWithCGDisplay(did, &link) != kCVReturnSuccess) {
+      CVDisplayLinkCreateWithActiveCGDisplays(&link);
+    }
+    CFRelease(uuid_ref);
+  }
+  CFRelease(uuid);
+
   CVTime refresh_period=CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
+
   payload->frame_time = (double)refresh_period.timeValue
                         / (double)refresh_period.timeScale * 1e6;
-  CVDisplayLinkSetOutputCallback(link,
-                                 frame_callback,
-                                 payload        );
 
+  CVDisplayLinkSetOutputCallback(link, frame_callback, payload);
   CVDisplayLinkStart(link);
 }
 

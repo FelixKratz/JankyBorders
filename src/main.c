@@ -127,6 +127,8 @@ int main(int argc, char** argv) {
 
   table_init(&g_settings.blacklist, 64, hash_blacklist, cmp_blacklist);
   table_init(&g_settings.whitelist, 64, hash_blacklist, cmp_blacklist);
+  g_settings.ax_focus = ax_check_trust(true);
+
   uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);
   mach_port_t server_port = mach_get_bs_port(BS_NAME);
   if (server_port && update_mask) {
@@ -169,7 +171,6 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
-  g_settings.ax_focus = ax_check_trust(true);
   windows_add_existing_windows(&g_windows);
 
   mach_server_begin(&g_mach_server, message_handler);

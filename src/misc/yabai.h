@@ -1,7 +1,6 @@
 #pragma once
 #include "extern.h"
 #include "../windows.h"
-#include <pthread.h>
 #include <CoreVideo/CoreVideo.h>
 
 #define _YABAI_INTEGRATION

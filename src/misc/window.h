@@ -1,10 +1,12 @@
 #pragma once
+#include "extern.h"
 #include "helpers.h"
 #include "space.h"
 
 #define WINDOW_TAG_DOCUMENT (1ULL << 0)
 #define WINDOW_TAG_FLOATING (1ULL << 1)
 #define WINDOW_TAG_ATTACHED (1ULL << 7)
+#define WINDOW_TAG_STICKY   (1ULL << 11)
 #define WINDOW_TAG_MODAL    (1ULL << 31)
 
 static inline bool window_suitable(CFTypeRef iterator) {
@@ -19,6 +21,27 @@ static inline bool window_suitable(CFTypeRef iterator) {
     return true;
   }
   return false;
+}
+
+static inline uint64_t window_tags(int cid, uint32_t wid) {
+  uint64_t tags = 0;
+  CFArrayRef window_ref = cfarray_of_cfnumbers(&wid,
+                                               sizeof(uint32_t),
+                                               1,
+                                               kCFNumberSInt32Type);
+  CFTypeRef query = SLSWindowQueryWindows(cid, window_ref, 0x0);
+  if (query) {
+    CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);
+    if (iterator
+        && SLSWindowIteratorGetCount(iterator) > 0
+        && SLSWindowIteratorAdvance(iterator)     ) {
+      tags = SLSWindowIteratorGetTags(iterator);
+    }
+    if (iterator) CFRelease(iterator);
+    CFRelease(query);
+  }
+  CFRelease(window_ref);
+  return tags;
 }
 
 static inline uint32_t get_front_window(int cid) {

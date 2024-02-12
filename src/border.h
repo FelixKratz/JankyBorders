@@ -49,6 +49,7 @@ struct border {
   bool needs_redraw;
   bool too_small;
   bool disable;
+  bool sticky;
 
   uint64_t sid;
   uint32_t wid;

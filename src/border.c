@@ -44,7 +44,10 @@ void border_draw(struct border* border) {
   static const float inner_border_radius = 10.f;
 
   int cid = SLSMainConnectionID();
-  if (!is_space_visible(cid, border->sid)) return;
+  if (!border->sticky && !is_space_visible(cid, border->sid)) return;
+
+  uint64_t tags = window_tags(cid, border->target_wid);
+  border->sticky = tags & WINDOW_TAG_STICKY;
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
@@ -254,6 +257,17 @@ void border_draw(struct border* border) {
                  border->target_wid      );
   SLSSetWindowBackgroundBlurRadius(cid, border->wid, g_settings.blur_radius);
 
+  uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
+  uint64_t clear_tags = 0;
+
+  if (border->sticky) {
+    set_tags |= WINDOW_TAG_STICKY;
+    clear_tags |= (1ULL << 45);
+  }
+
+  SLSSetWindowTags(cid, border->wid, &set_tags, 0x40);
+  SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
+
   SLSReenableUpdate(cid);
 }
 
@@ -267,7 +281,7 @@ void border_unhide(struct border* border) {
   int cid = SLSMainConnectionID();
   if (border->too_small
       || border->disable
-      || !is_space_visible(cid, border->sid)) {
+      || (!border->sticky && !is_space_visible(cid, border->sid))) {
     return;
   }
 

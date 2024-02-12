@@ -207,7 +207,7 @@ bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
   #endif
 
   struct border* border = table_find(windows, &wid);
-  if (border && border->sid == sid) {
+  if (border && (border->sid == sid || border->sticky)) {
     table_remove(windows, &wid);
     border_destroy(border);
     windows_update_notifications(windows);

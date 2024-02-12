@@ -44,10 +44,10 @@ void border_draw(struct border* border) {
   static const float inner_border_radius = 10.f;
 
   int cid = SLSMainConnectionID();
-  if (!border->sticky && !is_space_visible(cid, border->sid)) return;
-
   uint64_t tags = window_tags(cid, border->target_wid);
   border->sticky = tags & WINDOW_TAG_STICKY;
+  if (!border->sticky && !is_space_visible(cid, border->sid)) return;
+
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);

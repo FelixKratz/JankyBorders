@@ -33,8 +33,8 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
 
   border_transform = CGAffineTransformConcat(target_transform,
                                              payload->initial_transform);
-  border_transform.tx += 0.5*payload->dx;
-  border_transform.ty += 0.5*payload->dy;
+  border_transform.tx += payload->dx;
+  border_transform.ty += payload->dy;
 
   SLSSetWindowTransform(payload->cid, payload->border_wid, border_transform);
 
@@ -120,10 +120,10 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
     payload->initial_transform.d = border->target_bounds.size.height
                                    / proxy_frame.size.height;
 
-    payload->dx = border->bounds.size.width
-                  - border->target_bounds.size.width;
-    payload->dy = border->bounds.size.height
-                  - border->target_bounds.size.height;
+    payload->dx = 0.5*(border->bounds.size.width
+                  - border->target_bounds.size.width);
+    payload->dy = 0.5*(border->bounds.size.height
+                  - border->target_bounds.size.height);
 
     border->disable = true;
     border_track_transform(payload);

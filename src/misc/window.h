@@ -45,12 +45,9 @@ static inline uint64_t window_tags(int cid, uint32_t wid) {
 }
 
 static inline uint32_t get_front_window(int cid) {
+  uint32_t wid = 0;
   uint64_t active_sid = get_active_space_id(cid);
   debug("Active space id: %d\n", active_sid);
-  CFArrayRef space_list_ref = cfarray_of_cfnumbers(&active_sid,
-                                                   sizeof(uint64_t),
-                                                   1,
-                                                   kCFNumberSInt64Type);
 
   ProcessSerialNumber psn;
   _SLPSGetFrontProcess(&psn);
@@ -59,14 +56,17 @@ static inline uint32_t get_front_window(int cid) {
 
   uint64_t set_tags = 1;
   uint64_t clear_tags = 0;
+  CFArrayRef space_list_ref = cfarray_of_cfnumbers(&active_sid,
+                                                   sizeof(uint64_t),
+                                                   1,
+                                                   kCFNumberSInt64Type);
+
   CFArrayRef window_list = SLSCopyWindowsWithOptionsAndTags(cid,
                                                             target_cid,
                                                             space_list_ref,
                                                             0x2,
                                                             &set_tags,
                                                             &clear_tags    );
-
-  uint32_t wid = 0;
   if (window_list) {
     uint32_t window_count = CFArrayGetCount(window_list);
     if (window_count > 0) {

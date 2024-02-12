@@ -1,6 +1,7 @@
 #include "windows.h"
 #include "hashtable.h"
 #include "border.h"
+#include "misc/ax.h"
 #include "misc/yabai.h"
 #include <string.h>
 #include <libproc.h>
@@ -237,7 +238,11 @@ void windows_update_notifications(struct table* windows) {
 
 void windows_determine_and_focus_active_window(struct table* windows) {
   int cid = SLSMainConnectionID();
-  uint32_t front_wid = get_front_window(cid);
+  uint32_t front_wid = g_settings.ax_focus
+                       ? ax_get_front_window(cid)
+                       : get_front_window(cid);
+
+  debug("Front window: %d\n", front_wid);
   if (!windows_window_focus(windows, front_wid)) {
     debug("Taking slow window focus path: %d\n", front_wid);
     if (front_wid && windows_window_create(windows,

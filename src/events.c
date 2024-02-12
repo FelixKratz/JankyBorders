@@ -77,6 +77,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 }
 
 static void front_app_handler() {
+  debug("Window Focus\n");
   windows_determine_and_focus_active_window(&g_windows);
 }
 

@@ -36,6 +36,7 @@ struct settings {
   bool hidpi;
   bool show_background;
   int border_order;
+  bool ax_focus;
 
   bool blacklist_enabled;
   struct table blacklist;

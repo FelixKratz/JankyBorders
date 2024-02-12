@@ -5,6 +5,7 @@
 #include "mach.h"
 #include "parse.h"
 #include "misc/connection.h"
+#include "misc/ax.h"
 #include <stdio.h>
 
 #define VERSION_OPT_LONG "--version"
@@ -34,6 +35,7 @@ struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                .hidpi = false,
                                .show_background = false,
                                .border_order = BORDER_ORDER_BELOW,
+                               .ax_focus = false,
                                .blacklist_enabled = false,
                                .whitelist_enabled = false                    };
 
@@ -147,10 +149,10 @@ int main(int argc, char** argv) {
   SLSWindowManagementBridgeSetDelegate(NULL);
 
   mach_port_t port;
-  CGError error = SLSGetEventPort(cid, &port);
+  CGError err = SLSGetEventPort(cid, &port);
   CFMachPortRef cf_mach_port = NULL;
   CFRunLoopSourceRef source = NULL;
-  if (error == kCGErrorSuccess) {
+  if (err == kCGErrorSuccess) {
     CFMachPortRef cf_mach_port = CFMachPortCreateWithPort(NULL,
                                                           port,
                                                           event_callback,
@@ -167,6 +169,7 @@ int main(int argc, char** argv) {
     CFRelease(source);
   }
 
+  g_settings.ax_focus = ax_check_trust(true);
   windows_add_existing_windows(&g_windows);
 
   mach_server_begin(&g_mach_server, message_handler);

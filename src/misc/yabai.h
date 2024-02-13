@@ -9,21 +9,20 @@ struct track_transform_payload {
   int cid;
   uint32_t border_wid;
   uint32_t target_wid;
-  uint64_t frame_time;
+  uint64_t frame_delay;
   CGAffineTransform initial_transform;
-  float dx, dy;
 };
 
 static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp* now, const CVTimeStamp* output_time, CVOptionFlags flags, CVOptionFlags* flags_out, void* context) {
   struct track_transform_payload* payload = context;
-  usleep(0.25*payload->frame_time);
-  CGAffineTransform target_transform = CGAffineTransformIdentity;
-  CGAffineTransform border_transform = CGAffineTransformIdentity;
+  CGAffineTransform target_transform, border_transform;
+
+  usleep(payload->frame_delay);
   CGError error = SLSGetWindowTransform(payload->cid,
                                         payload->target_wid,
                                         &target_transform   );
 
-  if (error != 0) {
+  if (error != kCGErrorSuccess) {
     CVDisplayLinkStop(display_link);
     CVDisplayLinkRelease(display_link);
     free(payload);
@@ -32,11 +31,8 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
 
   border_transform = CGAffineTransformConcat(target_transform,
                                              payload->initial_transform);
-  border_transform.tx += payload->dx;
-  border_transform.ty += payload->dy;
 
   SLSSetWindowTransform(payload->cid, payload->border_wid, border_transform);
-
   return kCVReturnSuccess;
 }
 
@@ -44,8 +40,8 @@ static inline void border_track_transform(struct track_transform_payload* payloa
   CVDisplayLinkRef link;
   CVDisplayLinkCreateWithActiveCGDisplays(&link);
   CVTime refresh_period = CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
-  payload->frame_time = (double)refresh_period.timeValue
-                        / (double)refresh_period.timeScale * 1e6;
+  payload->frame_delay = 0.25e6 * (double)refresh_period.timeValue
+                        / (double)refresh_period.timeScale;
 
   CVDisplayLinkSetOutputCallback(link, frame_callback, payload);
   CVDisplayLinkStart(link);
@@ -98,11 +94,10 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
                                    / proxy_frame.size.width;
     payload->initial_transform.d = border->target_bounds.size.height
                                    / proxy_frame.size.height;
-
-    payload->dx = 0.5*(border->bounds.size.width
-                  - border->target_bounds.size.width);
-    payload->dy = 0.5*(border->bounds.size.height
-                  - border->target_bounds.size.height);
+    payload->initial_transform.tx = 0.5*(border->bounds.size.width
+                                    - border->target_bounds.size.width);
+    payload->initial_transform.ty = 0.5*(border->bounds.size.height
+                                    - border->target_bounds.size.height);
 
     border->disable_update = true;
     border_track_transform(payload);

@@ -20,7 +20,7 @@ void border_destroy(struct border* border) {
 }
 
 void border_move(struct border* border) {
-  if (border->disable) return;
+  if (border->disable_update) return;
   int cid = SLSMainConnectionID();
 
   CGRect window_frame;
@@ -38,7 +38,7 @@ void border_move(struct border* border) {
 }
 
 void border_draw(struct border* border) {
-  if (border->disable) return;
+  if (border->disable_update) return;
 
   static const float border_radius = 9.f;
   static const float inner_border_radius = 10.f;
@@ -280,7 +280,7 @@ void border_hide(struct border* border) {
 void border_unhide(struct border* border) {
   int cid = SLSMainConnectionID();
   if (border->too_small
-      || border->disable
+      || border->disable_update
       || (!border->sticky && !is_space_visible(cid, border->sid))) {
     return;
   }

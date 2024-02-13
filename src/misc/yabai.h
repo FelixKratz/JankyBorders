@@ -42,28 +42,8 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
 
 static inline void border_track_transform(struct track_transform_payload* payload) {
   CVDisplayLinkRef link;
-#if 0
-  // Link to appropriate proxy window display instead of all displays
-  CFStringRef uuid = SLSCopyManagedDisplayForWindow(payload->cid,
-                                                    payload->target_wid);
-
-  CFUUIDRef uuid_ref = CFUUIDCreateFromString(NULL, uuid);
-  if (!uuid_ref) {
-    CVDisplayLinkCreateWithActiveCGDisplays(&link);
-  } else {
-    uint32_t did = CGDisplayGetDisplayIDFromUUID(uuid_ref);
-    if (CVDisplayLinkCreateWithCGDisplay(did, &link) != kCVReturnSuccess) {
-      CVDisplayLinkCreateWithActiveCGDisplays(&link);
-    }
-    CFRelease(uuid_ref);
-  }
-  CFRelease(uuid);
-#else
   CVDisplayLinkCreateWithActiveCGDisplays(&link);
-#endif
-
-  CVTime refresh_period=CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
-
+  CVTime refresh_period = CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
   payload->frame_time = (double)refresh_period.timeValue
                         / (double)refresh_period.timeScale * 1e6;
 
@@ -124,7 +104,7 @@ static inline void check_yabai_proxy_begin(struct table* windows, struct table* 
     payload->dy = 0.5*(border->bounds.size.height
                   - border->target_bounds.size.height);
 
-    border->disable = true;
+    border->disable_update = true;
     border_track_transform(payload);
   }
 }
@@ -138,7 +118,7 @@ static inline void check_yabai_proxy_end(struct table* windows, struct table* pr
       table_remove(proxies, &real_wid);
       struct border* border = table_find(windows, &real_wid);
       if (border) {
-        border->disable = false;
+        border->disable_update = false;
         border_draw(border);
       }
     }

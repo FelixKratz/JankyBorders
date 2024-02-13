@@ -49,7 +49,7 @@ struct border {
   bool focused;
   bool needs_redraw;
   bool too_small;
-  bool disable;
+  bool disable_update;
   bool sticky;
 
   uint64_t sid;

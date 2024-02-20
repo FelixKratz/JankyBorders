@@ -40,6 +40,12 @@ API, thereby being faster than comparable tools.
 *hidpi=<boolean>*
 	If set to _on_, the border will be drawn with retina resolution.
 
+*ax_focus=<boolean>*
+	If set to _on_, the (slower) accessibility API is used to resolve the
+	focused window. Enabled automatically if the (parent) process has
+	accessibility permissions. Improves compatibility with other tools
+	modifying window properties on a system level (e.g. yabai).
+
 *blacklist=<application_list>*
 	The applications specified here are excluded from being bordered. For
 	example, blacklist="Safari,kitty" excludes Safari and kitty from being

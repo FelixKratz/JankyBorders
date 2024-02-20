@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "borders" "1" "2024-02-10"
+.TH "borders" "1" "2024-02-20"
 .P
 .SH NAME
 .P
@@ -59,6 +59,14 @@ Determines the width of the border.\& For example, width=5.\&0 creates a border
 \fBhidpi=<boolean>\fR
 .RS 4
 If set to \fIon\fR, the border will be drawn with retina resolution.\&
+.P
+.RE
+\fBax_focus=<boolean>\fR
+.RS 4
+If set to \fIon\fR, the (slower) accessibility API is used to resolve the
+focused window.\& Enabled automatically if the (parent) process has
+accessibility permissions.\& Improves compatibility with other tools
+modifying window properties on a system level (e.\&g.\& yabai).\&
 .P
 .RE
 \fBblacklist=<application_list>\fR

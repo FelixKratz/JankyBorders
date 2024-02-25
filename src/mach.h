@@ -1,5 +1,6 @@
 #pragma once
 #include <mach/mach.h>
+#include <stdbool.h>
 
 #define BS_NAME "git.felix.borders"
 

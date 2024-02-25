@@ -83,8 +83,8 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 }
 
 static void windows_remove_all(struct table* windows) {
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket* bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
@@ -103,8 +103,8 @@ void windows_recreate_all_borders(struct table* windows) {
 }
 
 void windows_update_all(struct table* windows) {
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket* bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
@@ -119,8 +119,8 @@ void windows_update_all(struct table* windows) {
 }
 
 void windows_update_active(struct table* windows) {
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket* bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
@@ -135,8 +135,8 @@ void windows_update_active(struct table* windows) {
 }
 
 void windows_update_inactive(struct table* windows) {
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket* bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
@@ -157,8 +157,8 @@ void windows_window_update(struct table* windows, uint32_t wid) {
 
 static bool windows_window_focus(struct table* windows, uint32_t wid) {
   bool found_window = false;
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket* bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
@@ -217,8 +217,8 @@ void windows_update_notifications(struct table* windows) {
   int window_count = 0;
   uint32_t window_list[1024] = {};
 
-  for (int window_index = 0; window_index < windows->capacity; ++window_index) {
-    struct bucket *bucket = windows->buckets[window_index];
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket *bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         uint32_t wid = *(uint32_t *) bucket->key;

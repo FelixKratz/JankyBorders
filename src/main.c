@@ -103,6 +103,20 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
 }
 
 static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
+  if (size == sizeof(struct mach_message)) {
+    struct mach_message* data = message;
+    struct payload {
+      uint32_t event;
+      uint32_t proxy_wid;
+      uint64_t proxy_sid;
+      uint32_t real_wid;
+    } payload;
+
+    if (data->descriptor.size == sizeof(struct payload)) {
+      payload = *(struct payload*)data->descriptor.address;
+      printf("Yabai Event: %d\n", payload.event);
+    }
+  }
   int cid = SLSMainConnectionID();
   CGEventRef event = SLEventCreateNextEvent(cid);
   if (!event) return;
@@ -152,6 +166,7 @@ int main(int argc, char** argv) {
 
   mach_port_t port;
   CGError err = SLSGetEventPort(cid, &port);
+  mach_register_port(port, "git.felix.jbevent");
   CFMachPortRef cf_mach_port = NULL;
   CFRunLoopSourceRef source = NULL;
   if (err == kCGErrorSuccess) {

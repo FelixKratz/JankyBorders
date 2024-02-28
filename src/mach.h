@@ -23,5 +23,6 @@ struct mach_server {
 };
 
 mach_port_t mach_get_bs_port(char* bs_name);
+bool mach_register_port(mach_port_t port, char* name);
 bool mach_server_begin(struct mach_server* mach_server, mach_handler handler);
 void mach_send_message(mach_port_t port, void* message, uint32_t len);

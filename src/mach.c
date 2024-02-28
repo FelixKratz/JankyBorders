@@ -60,6 +60,24 @@ void mach_message_callback(CFMachPortRef port, void* data, CFIndex size, void* c
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+bool mach_register_port(mach_port_t port, char* name) {
+  mach_port_name_t task = mach_task_self();
+  mach_port_t bs_port = 0;
+
+  if (task_get_special_port(task,
+                            TASK_BOOTSTRAP_PORT,
+                            &bs_port) != KERN_SUCCESS) {
+    return false;
+  }
+
+  if (bootstrap_register(bs_port, name, port) != KERN_SUCCESS) {
+    return false;
+  }
+
+  return true;
+}
+
+
 bool mach_server_begin(struct mach_server* mach_server, mach_handler handler) {
   mach_server->task = mach_task_self();
 
@@ -87,17 +105,7 @@ bool mach_server_begin(struct mach_server* mach_server, mach_handler handler) {
     return false;
   }
 
-  if (task_get_special_port(mach_server->task,
-                            TASK_BOOTSTRAP_PORT,
-                            &mach_server->bs_port) != KERN_SUCCESS) {
-    return false;
-  }
-
-  if (bootstrap_register(mach_server->bs_port,
-                         BS_NAME,
-                         mach_server->port    ) != KERN_SUCCESS) {
-    return false;
-  }
+  if (!mach_register_port(mach_server->port, BS_NAME)) return false;
 
   mach_server->handler = handler;
   mach_server->is_running = true;

@@ -1,11 +1,13 @@
 #include "border.h"
 #include "hashtable.h"
 #include "events.h"
+#include "misc/extern.h"
 #include "windows.h"
 #include "mach.h"
 #include "parse.h"
 #include "misc/connection.h"
 #include "misc/ax.h"
+#include "misc/yabai.h"
 #include <stdio.h>
 
 #define VERSION_OPT_LONG "--version"
@@ -103,6 +105,7 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
 }
 
 static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
+  #ifdef _YABAI_INTEGRATION
   if (size == sizeof(struct mach_message)) {
     struct mach_message* data = message;
     struct payload {
@@ -114,9 +117,19 @@ static void event_callback(CFMachPortRef port, void* message, CFIndex size, void
 
     if (data->descriptor.size == sizeof(struct payload)) {
       payload = *(struct payload*)data->descriptor.address;
-      printf("Yabai Event: %d\n", payload.event);
+      if (payload.event == 1325) {
+        yabai_proxy_begin(&g_windows,
+                          &g_animation_proxies,
+                          SLSMainConnectionID(),
+                          payload.proxy_wid,
+                          payload.real_wid      );
+      } else if (payload.event == 1326) {
+        yabai_proxy_end(&g_windows, &g_animation_proxies, payload.proxy_wid);
+      }
     }
   }
+  #endif
+
   int cid = SLSMainConnectionID();
   CGEventRef event = SLEventCreateNextEvent(cid);
   if (!event) return;

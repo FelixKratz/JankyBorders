@@ -2,7 +2,6 @@
 #include "hashtable.h"
 #include "border.h"
 #include "misc/ax.h"
-#include "misc/yabai.h"
 #include <string.h>
 #include <libproc.h>
 
@@ -37,11 +36,6 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   SLSConnectionGetPID(wid_cid, &pid);
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
-
-  #ifdef _YABAI_INTEGRATION
-  if (strcmp(pid_name_buffer, "yabai") == 0)
-   check_yabai_proxy_begin(windows, &g_animation_proxies, cid, wid_cid, wid);
-  #endif
 
   if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
 
@@ -199,10 +193,6 @@ void windows_window_unhide(struct table* windows, uint32_t wid) {
 }
 
 bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
-  #ifdef _YABAI_INTEGRATION
-  check_yabai_proxy_end(windows, &g_animation_proxies, wid);
-  #endif
-
   struct border* border = table_find(windows, &wid);
   if (border && (border->sid == sid || border->sticky)) {
     table_remove(windows, &wid);

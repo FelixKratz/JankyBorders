@@ -51,9 +51,7 @@ struct border {
   bool focused;
   bool needs_redraw;
   bool too_small;
-  bool disable_update;
   bool sticky;
-  bool unmanaged;
 
   uint64_t sid;
   uint32_t wid;
@@ -64,6 +62,10 @@ struct border {
   CGRect target_bounds;
   CGRect drawing_bounds;
   CGContextRef context;
+
+  bool is_proxy;
+  uint32_t proxy_wid;
+  struct border* proxy;
 };
 
 void border_init(struct border* border);

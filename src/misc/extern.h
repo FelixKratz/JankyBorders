@@ -16,6 +16,8 @@ extern CGError SLSGetWindowOwner(int cid, uint32_t wid, int* out_cid);
 extern CGError SLSConnectionGetPID(int cid, pid_t *pid);
 extern CGError SLSRequestNotificationsForWindows(int cid, uint32_t *window_list, int window_count);
 
+extern CGError SLSNewConnection(int zero, int *cid);
+extern CGError SLSReleaseConnection(int cid);
 extern CGError SLSWindowIsOrderedIn(int cid, uint32_t wid, bool* shown);
 extern CGError SLSGetWindowBounds(int cid, uint32_t wid, CGRect *frame);
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);

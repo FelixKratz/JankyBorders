@@ -6,7 +6,6 @@
 #include <libproc.h>
 
 extern pid_t g_pid;
-extern struct table g_animation_proxies;
 extern struct settings g_settings;
 
 static bool window_in_list(struct table* list, char* app_name) {

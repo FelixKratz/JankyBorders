@@ -23,7 +23,6 @@
 pid_t g_pid;
 mach_port_t g_server_port;
 struct table g_windows;
-struct table g_animation_proxies;
 struct mach_server g_mach_server;
 struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
                                                   .color = 0xffe1e3e4 },
@@ -119,12 +118,14 @@ static void event_callback(CFMachPortRef port, void* message, CFIndex size, void
       payload = *(struct payload*)data->descriptor.address;
       if (payload.event == 1325) {
         yabai_proxy_begin(&g_windows,
-                          &g_animation_proxies,
                           SLSMainConnectionID(),
                           payload.proxy_wid,
                           payload.real_wid      );
       } else if (payload.event == 1326) {
-        yabai_proxy_end(&g_windows, &g_animation_proxies, payload.proxy_wid);
+        yabai_proxy_end(&g_windows,
+                        SLSMainConnectionID(),
+                        payload.proxy_wid,
+                        payload.real_wid      );
       }
     }
   }
@@ -169,7 +170,6 @@ int main(int argc, char** argv) {
 
   pid_for_task(mach_task_self(), &g_pid);
   table_init(&g_windows, 1024, hash_windows, cmp_windows);
-  table_init(&g_animation_proxies, 1024, hash_windows, cmp_windows);
 
   g_server_port = create_connection_server_port();
 

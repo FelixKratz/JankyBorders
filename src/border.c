@@ -12,7 +12,7 @@ static void border_create_window(struct border* border, int cid, CGRect frame) {
   border->wid = window_create(cid,
                               frame,
                               g_settings.hidpi,
-                              border->unmanaged);
+                              border->is_proxy);
 
   border->frame = frame;
   border->needs_redraw = true;
@@ -41,7 +41,7 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
 
 static bool border_calculate_bounds(struct border* border, int cid, CGRect* frame) {
   CGRect window_frame;
-  if (border->unmanaged) window_frame = border->target_bounds;
+  if (border->is_proxy) window_frame = border->target_bounds;
   else SLSGetWindowBounds(cid, border->target_wid, &window_frame);
   border->target_bounds = window_frame;
 
@@ -208,11 +208,12 @@ static void border_draw(struct border* border, CGRect frame) {
 
 void border_destroy(struct border* border) {
   border_destroy_window(border);
+  if (border->proxy) border_destroy(border->proxy);
   free(border);
 }
 
 void border_move(struct border* border) {
-  if (border->disable_update) return;
+  if (border->proxy_wid) return;
   int cid = SLSMainConnectionID();
 
   CGRect window_frame;
@@ -231,7 +232,7 @@ void border_move(struct border* border) {
 }
 
 void border_update(struct border* border) {
-  if (border->disable_update) return;
+  if (border->proxy_wid) return;
 
   int cid = SLSMainConnectionID();
   uint64_t tags = window_tags(cid, border->target_wid);
@@ -241,7 +242,7 @@ void border_update(struct border* border) {
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
-  if (!shown) {
+  if (!shown && !border->is_proxy) {
     border_hide(border);
     return;
   } 
@@ -302,7 +303,7 @@ void border_hide(struct border* border) {
 void border_unhide(struct border* border) {
   int cid = SLSMainConnectionID();
   if (border->too_small
-      || border->disable_update
+      || border->proxy_wid
       || (!border->sticky && !is_space_visible(cid, border->sid))) {
     return;
   }

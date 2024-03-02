@@ -63,7 +63,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
           border->target_wid = wid;
           border->sid = sid;
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
           windows_update_notifications(windows);
         }
       }
@@ -104,7 +104,7 @@ void windows_update_all(struct table* windows) {
         struct border* border = bucket->value;
         if (border) {
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
         }
       }
       bucket = bucket->next;
@@ -120,7 +120,7 @@ void windows_update_active(struct table* windows) {
         struct border* border = bucket->value;
         if (border && border->focused) {
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
         }
       }
       bucket = bucket->next;
@@ -136,7 +136,7 @@ void windows_update_inactive(struct table* windows) {
         struct border* border = bucket->value;
         if (border && !border->focused) {
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
         }
       }
       bucket = bucket->next;
@@ -146,7 +146,7 @@ void windows_update_inactive(struct table* windows) {
 
 void windows_window_update(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_draw(border);
+  if (border) border_update(border);
 }
 
 static bool windows_window_focus(struct table* windows, uint32_t wid) {
@@ -159,13 +159,13 @@ static bool windows_window_focus(struct table* windows, uint32_t wid) {
         if (border->focused && border->target_wid != wid) {
           border->focused = false;
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
         }
 
         if (!border->focused && border->target_wid == wid) {
           border->focused = true;
           border->needs_redraw = true;
-          border_draw(border);
+          border_update(border);
         }
 
         if (border->target_wid == wid) found_window = true;
@@ -277,7 +277,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
           if (window_suitable(iterator)) {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
             struct border* border = table_find(windows, &wid);
-            if (border) border_draw(border);
+            if (border) border_update(border);
             else {
               debug("Creating Missing Window: %d\n", wid);
               windows_window_create(windows, wid, window_space_id(cid, wid));

@@ -67,7 +67,7 @@ static inline void yabai_proxy_begin(struct table* windows, struct table* proxie
     SLSGetWindowBounds(cid, wid, &proxy_frame);
     border->unmanaged = true;
     border->recreate_window = true;
-    border_draw(border);
+    border_update(border);
 
     payload->border_wid = border->wid;
     payload->target_wid = wid;
@@ -78,9 +78,9 @@ static inline void yabai_proxy_begin(struct table* windows, struct table* proxie
                                    / proxy_frame.size.width;
     payload->initial_transform.d = border->target_bounds.size.height
                                    / proxy_frame.size.height;
-    payload->initial_transform.tx = 0.5*(border->bounds.size.width
+    payload->initial_transform.tx = 0.5*(border->frame.size.width
                                     - border->target_bounds.size.width);
-    payload->initial_transform.ty = 0.5*(border->bounds.size.height
+    payload->initial_transform.ty = 0.5*(border->frame.size.height
                                     - border->target_bounds.size.height);
 
     border->disable_update = true;
@@ -100,7 +100,7 @@ static inline void yabai_proxy_end(struct table* windows, struct table* proxies,
         border->disable_update = false;
         border->unmanaged = false;
         border->recreate_window = true;
-        border_draw(border);
+        border_update(border);
       }
     }
   }

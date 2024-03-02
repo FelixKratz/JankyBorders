@@ -10,6 +10,8 @@
 #define BORDER_PADDING 8.0
 #define BORDER_TSMN 3.27f
 #define BORDER_TSMW 8.f
+#define BORDER_RADIUS 9.f
+#define BORDER_INNER_RADIUS 10.f
 
 struct gradient {
   enum { TL_TO_BR, TR_TO_BL } direction;
@@ -58,16 +60,17 @@ struct border {
   uint32_t wid;
   uint32_t target_wid;
 
-  CGRect bounds;
+  CGPoint origin;
+  CGRect frame;
   CGRect target_bounds;
+  CGRect drawing_bounds;
   CGContextRef context;
 };
 
 void border_init(struct border* border);
-void border_destroy_window(struct border* border);
 void border_destroy(struct border* border);
 
 void border_move(struct border* border);
-void border_draw(struct border* border);
+void border_update(struct border* border);
 void border_hide(struct border* border);
 void border_unhide(struct border* border);

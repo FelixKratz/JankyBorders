@@ -58,7 +58,8 @@ void border_draw(struct border* border) {
 
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-  border->target_bounds = window_frame;
+  if (border->unmanaged) window_frame = border->target_bounds;
+  else border->target_bounds = window_frame;
 
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
   if (smallest_rect.size.width < 2.f * inner_border_radius
@@ -76,11 +77,25 @@ void border_draw(struct border* border) {
   frame.origin = CGPointZero;
   window_frame.origin = (CGPoint){ -border_offset, -border_offset };
 
+  int level = window_level(cid, border->target_wid);
+  int sub_level = window_sub_level(border->target_wid);
+
   SLSDisableUpdate(cid);
-  if (!border->wid) {
-    border->wid = window_create(cid, frame, g_settings.hidpi);
+  struct border replaced_border = { 0 };
+  if (!border->wid || border->recreate_window) {
+    if (border->wid) {
+      replaced_border = *border;
+      if (border->unmanaged) border_destroy_window(&replaced_border);
+      else SLSSetWindowSubLevel(cid, border->wid, sub_level - 1);
+    }
+    border->wid = window_create(cid,
+                                frame,
+                                g_settings.hidpi,
+                                border->unmanaged);
+
     border->bounds = frame;
     border->needs_redraw = true;
+    border->recreate_window = false;
     border->context = SLWindowContextCreate(cid, border->wid, NULL);
     CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
 
@@ -97,9 +112,6 @@ void border_draw(struct border* border) {
     border->needs_redraw = true;
     border->bounds = frame;
   }
-
-  int level = window_level(cid, border->target_wid);
-  int sub_level = window_sub_level(border->target_wid);
 
   if (border->needs_redraw) {
     CGContextSaveGState(border->context);
@@ -269,6 +281,12 @@ void border_draw(struct border* border) {
   SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
 
   SLSReenableUpdate(cid);
+
+  if (replaced_border.wid) {
+    usleep(10000);
+    if (replaced_border.wid) SLSReleaseWindow(cid, replaced_border.wid);
+    if (replaced_border.context) CGContextRelease(replaced_border.context);
+  }
 }
 
 void border_hide(struct border* border) {

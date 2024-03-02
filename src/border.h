@@ -51,6 +51,8 @@ struct border {
   bool too_small;
   bool disable_update;
   bool sticky;
+  bool unmanaged;
+  bool recreate_window;
 
   uint64_t sid;
   uint32_t wid;

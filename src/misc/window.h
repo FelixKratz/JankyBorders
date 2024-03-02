@@ -220,22 +220,39 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
   CFRelease(window_list);
 }
 
-static inline uint32_t window_create(int cid, CGRect frame, bool hidpi) {
-  uint64_t id;
+static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unmanaged) {
+  uint32_t id;
   CFTypeRef frame_region;
+  uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
+  uint64_t clear_tags = 0;
 
   CGSNewRegionWithRect(&frame, &frame_region);
-  SLSNewWindow(cid,
-               kCGBackingStoreBuffered,
-               -9999,
-               -9999,
-               frame_region,
-               &id                     );
+
+  if (unmanaged) {
+    CFTypeRef empty_region = CGRegionCreateEmptyRegion();
+    SLSNewWindowWithOpaqueShapeAndContext(cid,
+                                          kCGBackingStoreBuffered,
+                                          frame_region,
+                                          empty_region,
+                                          13 | (1 << 18),
+                                          &set_tags,
+                                          -9999,
+                                          -9999,
+                                          64,
+                                          &id,
+                                          NULL                    );
+    CFRelease(empty_region);
+  } else {
+    SLSNewWindow(cid,
+                 kCGBackingStoreBuffered,
+                 -9999,
+                 -9999,
+                 frame_region,
+                 &id                     );
+  }
   CFRelease(frame_region);
 
   uint32_t wid = id;
-  uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
-  uint64_t clear_tags = 0;
 
   SLSSetWindowResolution(cid, wid, hidpi ? 2.0f : 1.0f);
   SLSSetWindowTags(cid, wid, &set_tags, 64);

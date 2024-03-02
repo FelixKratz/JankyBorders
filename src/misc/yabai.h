@@ -65,6 +65,9 @@ static inline void yabai_proxy_begin(struct table* windows, struct table* proxie
 
     CGRect proxy_frame;
     SLSGetWindowBounds(cid, wid, &proxy_frame);
+    border->unmanaged = true;
+    border->recreate_window = true;
+    border_draw(border);
 
     payload->border_wid = border->wid;
     payload->target_wid = wid;
@@ -95,6 +98,8 @@ static inline void yabai_proxy_end(struct table* windows, struct table* proxies,
       struct border* border = table_find(windows, &real_wid);
       if (border) {
         border->disable_update = false;
+        border->unmanaged = false;
+        border->recreate_window = true;
         border_draw(border);
       }
     }

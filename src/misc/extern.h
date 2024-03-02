@@ -44,6 +44,7 @@ extern CGError SLSMoveWindow(int cid, uint32_t wid, CGPoint* point);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
 extern CFTypeRef SLSTransactionCreate(int cid);
 extern CGError SLSTransactionOrderWindow(CFTypeRef transaction, uint32_t wid, int order, uint32_t rel_wid);
+extern CGError SLSTransactionSetWindowAlpha(CFTypeRef transaction, uint32_t wid, float alpha);
 extern CGError SLSTransactionCommit(CFTypeRef transaction, int synchronous);
 extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
 extern CGError SLSDisableUpdate(int cid);

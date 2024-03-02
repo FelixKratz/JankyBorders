@@ -55,21 +55,42 @@ static inline bool yabai_proxy_exists(struct table* proxies, uint32_t wid) {
 static inline void yabai_proxy_begin(struct table* windows, struct table* proxies, int cid, uint32_t wid, uint32_t real_wid) {
   if (!real_wid) return;
 
+  uint32_t current_proxy_wid = (intptr_t)table_find(proxies, &real_wid);
   table_remove(proxies, &real_wid);
   table_add(proxies, &real_wid, (void*)(intptr_t)wid);
-  table_add(proxies, &wid, (void*)(intptr_t)real_wid);
+
   struct border* border = table_find(windows, &real_wid);
+  struct border* proxy = table_find(proxies, &current_proxy_wid);
+  table_remove(proxies, &current_proxy_wid);
+
   if (border) {
+    border->disable_update = true;
+    if (!proxy) {
+      proxy = malloc(sizeof(struct border));
+      border_init(proxy);
+      proxy->target_bounds = border->target_bounds;
+      proxy->focused = border->focused;
+      proxy->target_wid = real_wid;
+      proxy->sid = border->sid;
+      proxy->unmanaged = true;
+      border_update(proxy);
+      proxy->disable_update = true;
+    }
+    table_add(proxies, &wid, (void*)proxy);
+
+    CFTypeRef transaction = SLSTransactionCreate(cid);
+    SLSTransactionSetWindowAlpha(transaction, border->wid, 0.f);
+    SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
+    SLSTransactionCommit(transaction, 1);
+    CFRelease(transaction);
+
     struct track_transform_payload* payload
                               = malloc(sizeof(struct track_transform_payload));
 
     CGRect proxy_frame;
     SLSGetWindowBounds(cid, wid, &proxy_frame);
-    border->unmanaged = true;
-    border->recreate_window = true;
-    border_update(border);
 
-    payload->border_wid = border->wid;
+    payload->border_wid = proxy->wid;
     payload->target_wid = wid;
     payload->cid = cid;
 
@@ -83,25 +104,31 @@ static inline void yabai_proxy_begin(struct table* windows, struct table* proxie
     payload->initial_transform.ty = 0.5*(border->frame.size.height
                                     - border->target_bounds.size.height);
 
-    border->disable_update = true;
     border_track_transform(payload);
-  }
+  } else if (proxy) border_destroy(proxy);
 }
 
 static inline void yabai_proxy_end(struct table* windows, struct table* proxies, uint32_t wid) {
-  uint32_t real_wid = (intptr_t)table_find(proxies, &wid);
-  if (real_wid) {
+  struct border* proxy = (struct border*)table_find(proxies, &wid);
+  if (proxy) {
+    uint32_t real_wid = proxy->target_wid;
     table_remove(proxies, &wid);
+
     uint32_t current_proxy_wid = (intptr_t)table_find(proxies, &real_wid);
     if (wid == current_proxy_wid) {
       table_remove(proxies, &real_wid);
       struct border* border = table_find(windows, &real_wid);
       if (border) {
         border->disable_update = false;
-        border->unmanaged = false;
-        border->recreate_window = true;
         border_update(border);
+        int cid = SLSMainConnectionID();
+        CFTypeRef transaction = SLSTransactionCreate(cid);
+        SLSTransactionSetWindowAlpha(transaction, proxy->wid, 0.f);
+        SLSTransactionSetWindowAlpha(transaction, border->wid, 1.f);
+        SLSTransactionCommit(transaction, 1);
+        CFRelease(transaction);
       }
     }
+    border_destroy(proxy);
   }
 }

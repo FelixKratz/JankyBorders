@@ -16,7 +16,6 @@ static void border_create_window(struct border* border, int cid, CGRect frame) {
 
   border->frame = frame;
   border->needs_redraw = true;
-  border->recreate_window = false;
   border->context = SLWindowContextCreate(cid, border->wid, NULL);
   CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
 
@@ -253,15 +252,7 @@ void border_update(struct border* border) {
   int sub_level = window_sub_level(border->target_wid);
 
   SLSDisableUpdate(cid);
-  struct border replaced_border = { 0 };
-  if (!border->wid || border->recreate_window) {
-    if (border->wid) {
-      replaced_border = *border;
-      if (border->unmanaged) border_destroy_window(&replaced_border);
-      else SLSSetWindowSubLevel(cid, border->wid, sub_level - 1);
-    }
-    border_create_window(border, cid, frame);
-  }
+  if (!border->wid) border_create_window(border, cid, frame);
 
   if (!CGRectEqualToRect(frame, border->frame)) {
     CFTypeRef frame_region;
@@ -300,12 +291,6 @@ void border_update(struct border* border) {
   SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
 
   SLSReenableUpdate(cid);
-
-  if (replaced_border.wid) {
-    usleep(10000);
-    if (replaced_border.wid) SLSReleaseWindow(cid, replaced_border.wid);
-    if (replaced_border.context) CGContextRelease(replaced_border.context);
-  }
 }
 
 void border_hide(struct border* border) {

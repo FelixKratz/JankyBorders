@@ -241,6 +241,7 @@ static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unm
                                           64,
                                           &id,
                                           NULL                    );
+    SLSSetWindowAlpha(cid, id, 0.f);
     CFRelease(empty_region);
   } else {
     SLSNewWindow(cid,

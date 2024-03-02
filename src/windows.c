@@ -62,7 +62,6 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
           border->target_wid = wid;
           border->sid = sid;
-          border->needs_redraw = true;
           border_update(border);
           windows_update_notifications(windows);
         }

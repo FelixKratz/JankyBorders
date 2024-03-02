@@ -103,13 +103,23 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     struct border* proxy = border->proxy;
     border->proxy_wid = 0;
     border->proxy = NULL;
-    border_update(border);
+
+    CGAffineTransform transform;
+    SLSGetWindowTransform(cid, proxy->wid, &transform);
 
     CFTypeRef transaction = SLSTransactionCreate(cid);
+    SLSTransactionSetWindowTransform(transaction,
+                                     border->wid,
+                                     0,
+                                     0,
+                                     transform   );
+
     SLSTransactionSetWindowAlpha(transaction, proxy->wid, 0.f);
     SLSTransactionSetWindowAlpha(transaction, border->wid, 1.f);
     SLSTransactionCommit(transaction, 1);
     CFRelease(transaction);
+
+    border_update(border);
     border_destroy(proxy);
   }
 }

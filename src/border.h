@@ -1,4 +1,5 @@
 #pragma once
+#include <pthread.h>
 #include "misc/helpers.h"
 #include "misc/window.h"
 #include "hashtable.h"
@@ -48,6 +49,8 @@ struct settings {
 };
 
 struct border {
+  pthread_mutex_t mutex;
+
   bool focused;
   bool needs_redraw;
   bool too_small;
@@ -69,9 +72,9 @@ struct border {
 };
 
 void border_init(struct border* border);
-void border_destroy(struct border* border);
+void border_destroy(struct border* border, int cid);
 
-void border_move(struct border* border);
-void border_update(struct border* border);
-void border_hide(struct border* border);
-void border_unhide(struct border* border);
+void border_move(struct border* border, int cid);
+void border_update(struct border* border, int cid, bool try_async);
+void border_hide(struct border* border, int cid);
+void border_unhide(struct border* border, int cid);

@@ -104,6 +104,7 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
 }
 
 static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
+  int cid = SLSMainConnectionID();
   #ifdef _YABAI_INTEGRATION
   if (size == sizeof(struct mach_message)) {
     struct mach_message* data = message;
@@ -118,20 +119,19 @@ static void event_callback(CFMachPortRef port, void* message, CFIndex size, void
       payload = *(struct payload*)data->descriptor.address;
       if (payload.event == 1325) {
         yabai_proxy_begin(&g_windows,
-                          SLSMainConnectionID(),
+                          cid,
                           payload.proxy_wid,
-                          payload.real_wid      );
+                          payload.real_wid  );
       } else if (payload.event == 1326) {
         yabai_proxy_end(&g_windows,
-                        SLSMainConnectionID(),
+                        cid,
                         payload.proxy_wid,
-                        payload.real_wid      );
+                        payload.real_wid  );
       }
     }
   }
   #endif
 
-  int cid = SLSMainConnectionID();
   CGEventRef event = SLEventCreateNextEvent(cid);
   if (!event) return;
   do {

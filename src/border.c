@@ -1,11 +1,16 @@
 #include "border.h"
 #include "hashtable.h"
 #include "windows.h"
+#include <pthread.h>
 
 extern struct settings g_settings;
 
 void border_init(struct border* border) {
   memset(border, 0, sizeof(struct border));
+  pthread_mutexattr_t mattr;
+  pthread_mutexattr_init(&mattr);
+  pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&border->mutex, &mattr);
 }
 
 static void border_create_window(struct border* border, int cid, CGRect frame) {
@@ -23,8 +28,8 @@ static void border_create_window(struct border* border, int cid, CGRect frame) {
   window_send_to_space(cid, border->wid, border->sid);
 }
 
-static void border_destroy_window(struct border* border) {
-  if (border->wid) SLSReleaseWindow(SLSMainConnectionID(), border->wid);
+static void border_destroy_window(struct border* border, int cid) {
+  if (border->wid) SLSReleaseWindow(cid, border->wid);
   if (border->context) CGContextRelease(border->context);
   border->wid = 0;
   border->context = NULL;
@@ -47,7 +52,7 @@ static bool border_calculate_bounds(struct border* border, int cid, CGRect* fram
 
   border->too_small = border_check_too_small(border, window_frame);
   if (border->too_small) {
-    border_hide(border);
+    border_hide(border, cid);
     return false;
   }
 
@@ -206,49 +211,34 @@ static void border_draw(struct border* border, CGRect frame) {
   CGContextRestoreGState(border->context);
 }
 
-void border_destroy(struct border* border) {
-  border_destroy_window(border);
-  if (border->proxy) border_destroy(border->proxy);
-  free(border);
-}
+static void border_update_internal(struct border* border, int cid) {
+  pthread_mutex_lock(&border->mutex);
+  if (border->proxy_wid) {
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  } 
 
-void border_move(struct border* border) {
-  if (border->proxy_wid) return;
-  int cid = SLSMainConnectionID();
-
-  CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-
-  CGPoint origin = { .x = window_frame.origin.x
-                          - g_settings.border_width
-                          - BORDER_PADDING,
-                     .y = window_frame.origin.y
-                          - g_settings.border_width
-                          - BORDER_PADDING          };
-
-  SLSMoveWindow(cid, border->wid, &origin);
-  border->target_bounds = window_frame;
-  border->origin = origin;
-}
-
-void border_update(struct border* border) {
-  if (border->proxy_wid) return;
-
-  int cid = SLSMainConnectionID();
   uint64_t tags = window_tags(cid, border->target_wid);
   border->sticky = tags & WINDOW_TAG_STICKY;
-  if (!border->sticky && !is_space_visible(cid, border->sid)) return;
+  if (!border->sticky && !is_space_visible(cid, border->sid)) {
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  }
 
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
   if (!shown && !border->is_proxy) {
-    border_hide(border);
+    border_hide(border, cid);
+    pthread_mutex_unlock(&border->mutex);
     return;
   } 
 
   CGRect frame;
-  if (!border_calculate_bounds(border, cid, &frame)) return;
+  if (!border_calculate_bounds(border, cid, &frame)) {
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  }
   int level = window_level(cid, border->target_wid);
   int sub_level = window_sub_level(border->target_wid);
 
@@ -292,16 +282,67 @@ void border_update(struct border* border) {
   SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
 
   SLSReenableUpdate(cid);
+  pthread_mutex_unlock(&border->mutex);
 }
 
-void border_hide(struct border* border) {
+static void* border_update_async_proc(void* context) {
+  struct { struct border* border; int cid; }* payload = context;
+  border_update_internal(payload->border, payload->cid);
+  free(payload);
+  return NULL;
+}
+
+
+void border_destroy(struct border* border, int cid) {
+  pthread_mutex_lock(&border->mutex);
+  border_destroy_window(border, cid);
+  if (border->proxy) border_destroy(border->proxy, cid);
+  pthread_mutex_unlock(&border->mutex);
+  free(border);
+}
+
+void border_move(struct border* border, int cid) {
+  if (border->proxy_wid) return;
+  CGRect window_frame;
+  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+
+  CGPoint origin = { .x = window_frame.origin.x
+                          - g_settings.border_width
+                          - BORDER_PADDING,
+                     .y = window_frame.origin.y
+                          - g_settings.border_width
+                          - BORDER_PADDING          };
+
+  SLSMoveWindow(cid, border->wid, &origin);
+  border->target_bounds = window_frame;
+  border->origin = origin;
+}
+
+void border_update(struct border* border, int cid, bool try_async) {
+  pthread_mutex_lock(&border->mutex);
+  if (!border->wid || !try_async) {
+    border_update_internal(border, cid);
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  }
+
+  struct payload { struct border* border; int cid; }* payload
+                                            = malloc(sizeof(struct payload));
+  payload->border = border;
+  payload->cid = cid;
+  pthread_t thread;
+  pthread_create(&thread, NULL, border_update_async_proc, payload);
+  pthread_detach(thread);
+  pthread_mutex_unlock(&border->mutex);
+}
+
+void border_hide(struct border* border, int cid) {
   if (border->wid) {
-    SLSOrderWindow(SLSMainConnectionID(), border->wid, 0, border->target_wid);
+    SLSOrderWindow(cid, border->wid, 0, border->target_wid);
   }
 }
 
-void border_unhide(struct border* border) {
-  int cid = SLSMainConnectionID();
+void border_unhide(struct border* border, int cid) {
   if (border->too_small
       || border->proxy_wid
       || (!border->sticky && !is_space_visible(cid, border->sid))) {
@@ -314,5 +355,5 @@ void border_unhide(struct border* border) {
                    g_settings.border_order,
                    border->target_wid      );
 
-  } else border_update(border);
+  } else border_update(border, cid, false);
 }

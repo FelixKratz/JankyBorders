@@ -13,21 +13,6 @@ void border_init(struct border* border) {
   pthread_mutex_init(&border->mutex, &mattr);
 }
 
-static void border_create_window(struct border* border, int cid, CGRect frame) {
-  border->wid = window_create(cid,
-                              frame,
-                              g_settings.hidpi,
-                              border->is_proxy);
-
-  border->frame = frame;
-  border->needs_redraw = true;
-  border->context = SLWindowContextCreate(cid, border->wid, NULL);
-  CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
-
-  if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
-  window_send_to_space(cid, border->wid, border->sid);
-}
-
 static void border_destroy_window(struct border* border, int cid) {
   if (border->wid) SLSReleaseWindow(cid, border->wid);
   if (border->context) CGContextRelease(border->context);
@@ -243,7 +228,7 @@ static void border_update_internal(struct border* border, int cid) {
   int sub_level = window_sub_level(border->target_wid);
 
   SLSDisableUpdate(cid);
-  if (!border->wid) border_create_window(border, cid, frame);
+  if (!border->wid) border_create_window(border, cid, frame, border->is_proxy);
 
   if (!CGRectEqualToRect(frame, border->frame)) {
     CFTypeRef frame_region;
@@ -292,6 +277,20 @@ static void* border_update_async_proc(void* context) {
   return NULL;
 }
 
+void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged) {
+  border->wid = window_create(cid,
+                              frame,
+                              g_settings.hidpi,
+                              unmanaged        );
+
+  border->frame = frame;
+  border->needs_redraw = true;
+  border->context = SLWindowContextCreate(cid, border->wid, NULL);
+  CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
+
+  if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
+  window_send_to_space(cid, border->wid, border->sid);
+}
 
 void border_destroy(struct border* border, int cid) {
   pthread_mutex_lock(&border->mutex);

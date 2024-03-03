@@ -108,6 +108,7 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
     if (!border->proxy) {
       border->proxy = malloc(sizeof(struct border));
       border_init(border->proxy);
+      border_create_window(border->proxy, cid, CGRectNull, true);
       border->proxy->target_bounds = border->target_bounds;
       border->proxy->focused = border->focused;
       border->proxy->target_wid = border->target_wid;

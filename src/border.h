@@ -73,6 +73,7 @@ struct border {
 
 void border_init(struct border* border);
 void border_destroy(struct border* border, int cid);
+void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged);
 
 void border_move(struct border* border, int cid);
 void border_update(struct border* border, int cid, bool try_async);

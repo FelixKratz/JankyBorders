@@ -35,20 +35,24 @@ extern CGError SLSSetWindowShadowParameters(int cid, uint32_t wid, float std, fl
 extern CGError SLSGetWindowTransform(int cid, uint32_t wid, CGAffineTransform* transform);
 extern CGError SLSSetWindowTransform(int cid, uint32_t wid, CGAffineTransform transform);
 
-extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relativeToWID);
-extern CGError SLSSetWindowLevel(int cid, uint32_t wid, int level);
-extern CGError SLSSetWindowSubLevel(int cid, uint32_t wid, int level);
 extern CGError SLSWindowSetShadowProperties(uint32_t wid, CFDictionaryRef properties);
 extern CGError SLSGetWindowLevel(int cid, uint32_t wid, int64_t* level_out);
 extern uint64_t SLSGetWindowSubLevel(int cid, uint32_t wid);
 extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
-extern CGError SLSMoveWindow(int cid, uint32_t wid, CGPoint* point);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
+
 extern CFTypeRef SLSTransactionCreate(int cid);
+extern CGError SLSTransactionSetWindowLevel(CFTypeRef transaction, uint32_t wid, int level);
+extern CGError SLSTransactionSetWindowSubLevel(CFTypeRef transaction, uint32_t wid, int level);
+extern CGError SLSTransactionSetWindowShape(CFTypeRef transaction, uint32_t wid, float x_offset, float y_offset, CFTypeRef shape);
+extern CGError SLSTransactionMoveWindowWithGroup(CFTypeRef transaction, uint32_t wid, CGPoint point);
 extern CGError SLSTransactionOrderWindow(CFTypeRef transaction, uint32_t wid, int order, uint32_t rel_wid);
 extern CGError SLSTransactionSetWindowAlpha(CFTypeRef transaction, uint32_t wid, float alpha);
+extern CGError SLSTransactionSetWindowSystemAlpha(CFTypeRef transaction, uint32_t wid, float alpha);
 extern CGError SLSTransactionSetWindowTransform(CFTypeRef transaction, uint32_t wid, int not, int important, CGAffineTransform transform);
 extern CGError SLSTransactionCommit(CFTypeRef transaction, int synchronous);
+extern CGError SLSTransactionCommitUsingMethod(CFTypeRef transaction, uint32_t method);
+
 extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
 extern CGError SLSDisableUpdate(int cid);
 extern CGError SLSReenableUpdate(int cid);

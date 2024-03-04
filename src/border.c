@@ -2,6 +2,7 @@
 #include "hashtable.h"
 #include "windows.h"
 #include <pthread.h>
+#include <time.h>
 
 extern struct settings g_settings;
 
@@ -29,6 +30,19 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
   return false;
 }
 
+static void border_coalesce_resize_and_move_events(struct border* border, int cid, CGPoint* origin) {
+  int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
+  if (now - border->last_coalesce_attempt > (1ULL << 30)) {
+    usleep(15000);
+    CGRect window_frame;
+    SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+    float border_offset = - g_settings.border_width - BORDER_PADDING;
+    window_frame = CGRectInset(window_frame, border_offset, border_offset);
+    *origin = window_frame.origin;
+  }
+  border->last_coalesce_attempt = now;
+}
+
 static bool border_calculate_bounds(struct border* border, int cid, CGRect* frame) {
   CGRect window_frame;
   if (border->is_proxy) window_frame = border->target_bounds;
@@ -44,10 +58,18 @@ static bool border_calculate_bounds(struct border* border, int cid, CGRect* fram
   float border_offset = - g_settings.border_width - BORDER_PADDING;
   *frame = CGRectInset(window_frame, border_offset, border_offset);
 
+  bool needs_move = !CGPointEqualToPoint(border->origin, frame->origin);
   border->origin = frame->origin;
   frame->origin = CGPointZero;
+  bool needs_resize = !CGRectEqualToRect(border->frame, *frame);
+
+  if (!border->is_proxy && needs_resize && !needs_move) {
+    border_coalesce_resize_and_move_events(border, cid, &border->origin);
+  }
+
   window_frame.origin = (CGPoint){ -border_offset, -border_offset };
   border->drawing_bounds = window_frame;
+
   return true;
 }
 
@@ -194,64 +216,65 @@ static void border_draw(struct border* border, CGRect frame) {
 }
 
 static void border_update_internal(struct border* border, int cid) {
-  pthread_mutex_lock(&border->mutex);
-  if (border->proxy_wid) {
-    pthread_mutex_unlock(&border->mutex);
-    return;
-  } 
+  if (border->proxy_wid) return;
 
   uint64_t tags = window_tags(cid, border->target_wid);
   border->sticky = tags & WINDOW_TAG_STICKY;
-  if (!border->sticky && !is_space_visible(cid, border->sid)) {
-    pthread_mutex_unlock(&border->mutex);
-    return;
-  }
+  if (!border->sticky && !is_space_visible(cid, border->sid)) return;
 
 
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
   if (!shown && !border->is_proxy) {
     border_hide(border, cid);
-    pthread_mutex_unlock(&border->mutex);
     return;
   } 
 
   CGRect frame;
-  if (!border_calculate_bounds(border, cid, &frame)) {
-    pthread_mutex_unlock(&border->mutex);
-    return;
-  }
+  if (!border_calculate_bounds(border, cid, &frame)) return;
   int level = window_level(cid, border->target_wid);
   int sub_level = window_sub_level(border->target_wid);
 
-  SLSDisableUpdate(cid);
   if (!border->wid) border_create_window(border, cid, frame, border->is_proxy);
 
+  CFTypeRef transaction = SLSTransactionCreate(cid);
   if (!CGRectEqualToRect(frame, border->frame)) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
-    SLSSetWindowShape(cid, border->wid, -9999, -9999, frame_region);
+    SLSTransactionSetWindowShape(transaction,
+                                 border->wid,
+                                 -9999,
+                                 -9999,
+                                 frame_region);
     CFRelease(frame_region);
 
     border->needs_redraw = true;
     border->frame = frame;
   }
 
-  if (border->needs_redraw) border_draw(border, frame);
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, border->origin);
 
-  SLSMoveWindow(cid, border->wid, &border->origin);
+  bool disabled_update = border->needs_redraw;
+  if (border->needs_redraw) {
+    SLSDisableUpdate(cid);
+    SLSTransactionCommit(transaction, 1);
+    CFRelease(transaction);
+
+    border_draw(border, frame);
+    transaction = SLSTransactionCreate(cid);
+  }
   CGAffineTransform transform = CGAffineTransformIdentity;
   transform.tx = -border->origin.x;
   transform.ty = -border->origin.y;
-  SLSSetWindowTransform(cid, border->wid, transform);
-  SLSSetWindowLevel(cid, border->wid, level);
-  SLSSetWindowSubLevel(cid, border->wid, sub_level);
-  SLSOrderWindow(cid,
-                 border->wid,
-                 g_settings.border_order,
-                 border->target_wid      );
-  SLSSetWindowBackgroundBlurRadius(cid, border->wid, g_settings.blur_radius);
-
+  SLSTransactionSetWindowTransform(transaction, border->wid, 0, 0, transform);
+  SLSTransactionSetWindowLevel(transaction, border->wid, level);
+  SLSTransactionSetWindowSubLevel(transaction, border->wid, sub_level);
+  SLSTransactionOrderWindow(transaction,
+                            border->wid,
+                            g_settings.border_order,
+                            border->target_wid      );
+  SLSTransactionCommit(transaction, 1);
+  CFRelease(transaction);
   uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
   uint64_t clear_tags = 0;
 
@@ -262,14 +285,16 @@ static void border_update_internal(struct border* border, int cid) {
 
   SLSSetWindowTags(cid, border->wid, &set_tags, 0x40);
   SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
+  SLSSetWindowBackgroundBlurRadius(cid, border->wid, g_settings.blur_radius);
 
-  SLSReenableUpdate(cid);
-  pthread_mutex_unlock(&border->mutex);
+  if (disabled_update) SLSReenableUpdate(cid);
 }
 
 static void* border_update_async_proc(void* context) {
   struct { struct border* border; int cid; }* payload = context;
+  pthread_mutex_lock(&payload->border->mutex);
   border_update_internal(payload->border, payload->cid);
+  pthread_mutex_unlock(&payload->border->mutex);
   free(payload);
   return NULL;
 }
@@ -315,7 +340,10 @@ void border_move(struct border* border, int cid) {
                           - g_settings.border_width
                           - BORDER_PADDING          };
 
-  SLSMoveWindow(cid, border->wid, &origin);
+  CFTypeRef transaction = SLSTransactionCreate(cid);
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
+  SLSTransactionCommit(transaction, 0);
+  CFRelease(transaction);
   border->target_bounds = window_frame;
   border->origin = origin;
   pthread_mutex_unlock(&border->mutex);
@@ -342,7 +370,10 @@ void border_update(struct border* border, int cid, bool try_async) {
 void border_hide(struct border* border, int cid) {
   pthread_mutex_lock(&border->mutex);
   if (border->wid) {
-    SLSOrderWindow(cid, border->wid, 0, border->target_wid);
+    CFTypeRef transaction = SLSTransactionCreate(cid);
+    SLSTransactionOrderWindow(transaction, border->wid, 0, border->target_wid);
+    SLSTransactionCommit(transaction, 0);
+    CFRelease(transaction);
   }
   pthread_mutex_unlock(&border->mutex);
 }
@@ -357,10 +388,13 @@ void border_unhide(struct border* border, int cid) {
   }
 
   if (border->wid) {
-    SLSOrderWindow(cid,
-                   border->wid,
-                   g_settings.border_order,
-                   border->target_wid      );
+    CFTypeRef transaction = SLSTransactionCreate(cid);
+    SLSTransactionOrderWindow(transaction,
+                              border->wid,
+                              g_settings.border_order,
+                              border->target_wid      );
+    SLSTransactionCommit(transaction, 0);
+    CFRelease(transaction);
 
   } else border_update(border, cid, false);
   pthread_mutex_unlock(&border->mutex);

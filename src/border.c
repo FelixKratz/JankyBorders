@@ -275,6 +275,7 @@ static void* border_update_async_proc(void* context) {
 }
 
 void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged) {
+  pthread_mutex_lock(&border->mutex);
   border->wid = window_create(cid,
                               frame,
                               g_settings.hidpi,
@@ -287,6 +288,7 @@ void border_create_window(struct border* border, int cid, CGRect frame, bool unm
 
   if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
   window_send_to_space(cid, border->wid, border->sid);
+  pthread_mutex_unlock(&border->mutex);
 }
 
 void border_destroy(struct border* border, int cid) {
@@ -298,7 +300,11 @@ void border_destroy(struct border* border, int cid) {
 }
 
 void border_move(struct border* border, int cid) {
-  if (border->proxy_wid) return;
+  pthread_mutex_lock(&border->mutex);
+  if (border->proxy_wid) {
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  }
   CGRect window_frame;
   SLSGetWindowBounds(cid, border->target_wid, &window_frame);
 
@@ -312,6 +318,7 @@ void border_move(struct border* border, int cid) {
   SLSMoveWindow(cid, border->wid, &origin);
   border->target_bounds = window_frame;
   border->origin = origin;
+  pthread_mutex_unlock(&border->mutex);
 }
 
 void border_update(struct border* border, int cid, bool try_async) {
@@ -333,15 +340,19 @@ void border_update(struct border* border, int cid, bool try_async) {
 }
 
 void border_hide(struct border* border, int cid) {
+  pthread_mutex_lock(&border->mutex);
   if (border->wid) {
     SLSOrderWindow(cid, border->wid, 0, border->target_wid);
   }
+  pthread_mutex_unlock(&border->mutex);
 }
 
 void border_unhide(struct border* border, int cid) {
+  pthread_mutex_lock(&border->mutex);
   if (border->too_small
       || border->proxy_wid
       || (!border->sticky && !is_space_visible(cid, border->sid))) {
+    pthread_mutex_unlock(&border->mutex);
     return;
   }
 
@@ -352,4 +363,5 @@ void border_unhide(struct border* border, int cid) {
                    border->target_wid      );
 
   } else border_update(border, cid, false);
+  pthread_mutex_unlock(&border->mutex);
 }

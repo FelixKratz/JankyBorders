@@ -81,12 +81,12 @@ static void windows_remove_all(struct table* windows) {
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
-        table_remove(windows, &border->target_wid);
         border_destroy(border, cid);
       }
       bucket = bucket->next;
     }
   }
+  table_clear(windows);
   windows_update_notifications(windows);
 }
 
@@ -271,7 +271,6 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
                                                             &clear_tags    );
 
   if (window_list) {
-    uint32_t window_count = CFArrayGetCount(window_list);
     CFTypeRef query = SLSWindowQueryWindows(cid, window_list, 0x0);
     if (query) {
       CFTypeRef iterator = SLSWindowQueryResultCopyWindows(query);

@@ -86,8 +86,6 @@ static void border_draw(struct border* border, CGRect frame) {
     CFRelease(cfc);
     CGColorRelease(c[0]);
     CGColorRelease(c[1]);
-    CGPoint point1;
-    CGPoint point2;
     if (color_style.gradient.direction == TR_TO_BL) {
       gradient_direction[0] = CGPointMake(frame.size.width,
                                           frame.size.height);
@@ -180,7 +178,6 @@ static void border_draw(struct border* border, CGRect frame) {
     color_style = g_settings.background;
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
-      uint32_t color = color_style.color;
       float a,r,g,b;
       colors_from_hex(color_style.color, &a, &r, &g, &b);
       CGContextSetRGBFillColor(border->context, r, g, b, a);

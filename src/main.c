@@ -180,8 +180,6 @@ int main(int argc, char** argv) {
   mach_port_t port;
   CGError err = SLSGetEventPort(cid, &port);
   mach_register_port(port, "git.felix.jbevent");
-  CFMachPortRef cf_mach_port = NULL;
-  CFRunLoopSourceRef source = NULL;
   if (err == kCGErrorSuccess) {
     CFMachPortRef cf_mach_port = CFMachPortCreateWithPort(NULL,
                                                           port,

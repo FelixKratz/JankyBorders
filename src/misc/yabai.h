@@ -34,7 +34,6 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
   if (error != kCGErrorSuccess) {
     CVDisplayLinkStop(display_link);
     CVDisplayLinkRelease(display_link);
-    SLSReleaseConnection(payload->cid);
     free(payload);
     return kCVReturnSuccess;
   }

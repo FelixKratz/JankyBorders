@@ -24,7 +24,8 @@ pid_t g_pid;
 mach_port_t g_server_port;
 struct table g_windows;
 struct mach_server g_mach_server;
-struct settings g_settings = { .active_window = { .stype = COLOR_STYLE_SOLID,
+struct settings g_settings = { .enabled = true,
+                               .active_window = { .stype = COLOR_STYLE_SOLID,
                                                   .color = 0xffe1e3e4 },
                                .inactive_window = { .stype = COLOR_STYLE_SOLID,
                                                     .color =  0x00000000 },

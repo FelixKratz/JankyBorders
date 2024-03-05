@@ -7,6 +7,8 @@
 
 #define _YABAI_INTEGRATION
 
+void border_update_internal(struct border* border, int cid, struct settings* settings);
+
 struct track_transform_payload {
   int cid;
   uint32_t border_wid;
@@ -18,6 +20,7 @@ struct track_transform_payload {
 
 struct yabai_proxy_payload {
   union { struct border* proxy; struct border* border; };
+  struct settings settings;
   uint32_t border_wid;
   uint32_t real_wid;
   uint32_t external_proxy_wid;
@@ -66,7 +69,7 @@ static void* yabai_proxy_begin_proc(void* context) {
 
   if (!proxy->is_proxy) {
     proxy->is_proxy = true;
-    border_update(proxy, cid, false);
+    border_update_internal(proxy, cid, &info->settings);
 
     CFTypeRef transaction = SLSTransactionCreate(cid);
     SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
@@ -108,7 +111,7 @@ static void* yabai_proxy_end_proc(void* context) {
   pthread_mutex_lock(&border->mutex);
   border->disable_coalescing = true;
   border->external_proxy_wid = 0;
-  border_update(border, cid, false);
+  border_update_internal(border, cid, &info->settings);
   border->disable_coalescing = false;
   pthread_mutex_unlock(&border->mutex);
   free(context);
@@ -125,7 +128,7 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
     if (!border->proxy) {
       border->proxy = malloc(sizeof(struct border));
       border_init(border->proxy);
-      border_create_window(border->proxy, cid, CGRectNull, true);
+      border_create_window(border->proxy, cid, CGRectNull, true, false);
       border->proxy->target_bounds = border->target_bounds;
       border->proxy->focused = border->focused;
       border->proxy->target_wid = border->target_wid;
@@ -139,6 +142,7 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
     payload->external_proxy_wid = border->external_proxy_wid;
     payload->real_wid = real_wid;
     payload->cid = cid;
+    payload->settings = *border_get_settings(border);
 
     pthread_t thread;
     pthread_create(&thread, NULL, yabai_proxy_begin_proc, payload);
@@ -176,6 +180,7 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     payload->border = border;
     payload->border_wid = border->wid;
     payload->cid = cid;
+    payload->settings = *border_get_settings(border);
 
     pthread_t thread;
     pthread_create(&thread, NULL, yabai_proxy_end_proc, payload);

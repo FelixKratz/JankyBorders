@@ -29,6 +29,8 @@ struct color_style {
 };
 
 struct settings {
+  bool enabled;
+
   struct color_style active_window;
   struct color_style inactive_window;
   struct color_style background;
@@ -72,13 +74,17 @@ struct border {
   bool is_proxy;
   struct border* proxy;
   uint32_t external_proxy_wid;
+
+  struct settings setting_override;
 };
 
 void border_init(struct border* border);
 void border_destroy(struct border* border, int cid);
-void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged);
+void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged, bool hidpi);
 
 void border_move(struct border* border, int cid);
 void border_update(struct border* border, int cid, bool try_async);
 void border_hide(struct border* border, int cid);
 void border_unhide(struct border* border, int cid);
+
+struct settings* border_get_settings(struct border* border);

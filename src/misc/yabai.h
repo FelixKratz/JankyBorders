@@ -1,6 +1,7 @@
 #pragma once
 #include "extern.h"
 #include "../windows.h"
+#include "../mach.h"
 #include <CoreVideo/CoreVideo.h>
 #include <pthread.h>
 
@@ -152,4 +153,71 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     border_destroy(proxy, cid);
     border_update(border, cid, true);
   }
+}
+
+static void yabai_message(CFMachPortRef port, void* data, CFIndex size, void* context) {
+  if (size == sizeof(struct mach_message)) {
+    struct mach_message* message = data;
+    struct payload {
+      uint32_t event;
+      uint32_t proxy_wid;
+      uint64_t proxy_sid;
+      uint32_t real_wid;
+    } payload;
+
+    if (message->descriptor.size == sizeof(struct payload)) {
+      payload = *(struct payload*)message->descriptor.address;
+      if (payload.event == 1325) {
+        yabai_proxy_begin(context,
+                          SLSMainConnectionID(),
+                          payload.proxy_wid,
+                          payload.real_wid  );
+      } else if (payload.event == 1326) {
+        yabai_proxy_end(context,
+                        SLSMainConnectionID(),
+                        payload.proxy_wid,
+                        payload.real_wid      );
+      }
+    }
+    mach_msg_destroy(&message->header);
+  }
+}
+
+static inline void yabai_register_mach_port(struct table* windows) {
+  ipc_space_t task = mach_task_self();
+  mach_port_t port;
+  if (mach_port_allocate(task,
+                         MACH_PORT_RIGHT_RECEIVE,
+                         &port                   ) != KERN_SUCCESS) {
+    return;
+  }
+
+  struct mach_port_limits limits = {};
+  limits.mpl_qlimit = MACH_PORT_QLIMIT_LARGE;
+
+  if (mach_port_set_attributes(task,
+                               port,
+                               MACH_PORT_LIMITS_INFO,
+                               (mach_port_info_t)&limits,
+                               MACH_PORT_LIMITS_INFO_COUNT) != KERN_SUCCESS) {
+    return;
+  }
+
+  if (!mach_register_port(port, "git.felix.jbevent")) return;
+
+  CFMachPortContext context = {0, (void*)windows};
+
+  CFMachPortRef cf_mach_port = CFMachPortCreateWithPort(NULL,
+                                                        port,
+                                                        yabai_message,
+                                                        &context,
+                                                        false         );
+
+  CFRunLoopSourceRef source = CFMachPortCreateRunLoopSource(NULL,
+                                                            cf_mach_port,
+                                                            0            );
+
+  CFRunLoopAddSource(CFRunLoopGetMain(), source, kCFRunLoopDefaultMode);
+  CFRelease(source);
+  CFRelease(cf_mach_port);
 }

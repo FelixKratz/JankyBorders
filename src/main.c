@@ -105,33 +105,6 @@ static void send_args_to_server(mach_port_t port, int argc, char** argv) {
 
 static void event_callback(CFMachPortRef port, void* message, CFIndex size, void* context) {
   int cid = SLSMainConnectionID();
-  #ifdef _YABAI_INTEGRATION
-  if (size == sizeof(struct mach_message)) {
-    struct mach_message* data = message;
-    struct payload {
-      uint32_t event;
-      uint32_t proxy_wid;
-      uint64_t proxy_sid;
-      uint32_t real_wid;
-    } payload;
-
-    if (data->descriptor.size == sizeof(struct payload)) {
-      payload = *(struct payload*)data->descriptor.address;
-      if (payload.event == 1325) {
-        yabai_proxy_begin(&g_windows,
-                          cid,
-                          payload.proxy_wid,
-                          payload.real_wid  );
-      } else if (payload.event == 1326) {
-        yabai_proxy_end(&g_windows,
-                        cid,
-                        payload.proxy_wid,
-                        payload.real_wid  );
-      }
-    }
-  }
-  #endif
-
   CGEventRef event = SLEventCreateNextEvent(cid);
   if (!event) return;
   do {
@@ -179,7 +152,6 @@ int main(int argc, char** argv) {
 
   mach_port_t port;
   CGError err = SLSGetEventPort(cid, &port);
-  mach_register_port(port, "git.felix.jbevent");
   if (err == kCGErrorSuccess) {
     CFMachPortRef cf_mach_port = CFMachPortCreateWithPort(NULL,
                                                           port,
@@ -201,6 +173,10 @@ int main(int argc, char** argv) {
 
   mach_server_begin(&g_mach_server, message_handler);
   if (!update_mask) execute_config_file("borders", "bordersrc");
+
+  #ifdef _YABAI_INTEGRATION
+  yabai_register_mach_port(&g_windows);
+  #endif
   CFRunLoopRun();
   return 0;
 }

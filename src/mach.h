@@ -15,7 +15,7 @@ typedef MACH_HANDLER(mach_handler);
 
 struct mach_server {
   bool is_running;
-  mach_port_name_t task;
+  ipc_space_t task;
   mach_port_t port;
   mach_port_t bs_port;
 

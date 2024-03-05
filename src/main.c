@@ -149,7 +149,6 @@ int main(int argc, char** argv) {
 
   int cid = SLSMainConnectionID();
   events_register(cid);
-  SLSWindowManagementBridgeSetDelegate(NULL);
 
   mach_port_t port;
   CGError err = SLSGetEventPort(cid, &port);

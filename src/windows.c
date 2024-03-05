@@ -192,9 +192,7 @@ void windows_window_hide(struct table* windows, uint32_t wid) {
 
 void windows_window_unhide(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) {
-    border_unhide(border, SLSMainConnectionID());
-  }
+  if (border) border_unhide(border, SLSMainConnectionID());
 }
 
 bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
@@ -294,7 +292,6 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
     }
     CFRelease(window_list);
   }
-
   CFRelease(space_list_ref);
 }
 

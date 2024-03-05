@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include "misc/helpers.h"
 #include "misc/window.h"
+#include "misc/drawing.h"
 #include "hashtable.h"
 
 #define BORDER_ORDER_ABOVE 1
@@ -13,12 +14,6 @@
 #define BORDER_TSMW 8.f
 #define BORDER_RADIUS 9.f
 #define BORDER_INNER_RADIUS 10.f
-
-struct gradient {
-  enum { TL_TO_BR, TR_TO_BL } direction;
-  uint32_t color1;
-  uint32_t color2;
-};
 
 struct color_style {
   enum { COLOR_STYLE_GRADIENT, COLOR_STYLE_SOLID, COLOR_STYLE_GLOW } stype;

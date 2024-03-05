@@ -99,51 +99,24 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                                    : settings->inactive_window;
 
   CGGradientRef gradient = NULL;
-  CGPoint gradient_direction[2];
+  CGPoint gradient_dir[2];
   if (color_style.stype == COLOR_STYLE_SOLID
      || color_style.stype == COLOR_STYLE_GLOW) {
-    float a,r,g,b;
-    colors_from_hex(color_style.color, &a, &r, &g, &b);
-    CGContextSetRGBFillColor(border->context, r, g, b, a);
-    CGContextSetRGBStrokeColor(border->context, r, g, b, a);
-
-    if (color_style.stype == COLOR_STYLE_GLOW) {
-      CGColorRef color_ref = CGColorCreateGenericRGB(r, g, b, 1.0);
-      CGContextSetShadowWithColor(border->context, CGSizeZero, 10.0, color_ref);
-      CGColorRelease(color_ref);
-    }
+    bool glow = color_style.stype == COLOR_STYLE_GLOW;
+    drawing_set_stroke_and_fill(border->context, color_style.color, glow);
   } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
-    float a1, a2, r1, r2, g1, g2, b1, b2;
-    colors_from_hex(color_style.gradient.color1, &a1, &r1, &g1, &b1);
-    colors_from_hex(color_style.gradient.color2, &a2, &r2, &g2, &b2);
-    CGColorRef c[] = { CGColorCreateSRGB(r1, g1, b1, a1),
-                       CGColorCreateSRGB(r2, g2, b2, a2) };
-    CFArrayRef cfc = CFArrayCreate(NULL,
-                                   (const void **)c,
-                                   2,
-                                   &kCFTypeArrayCallBacks);
-    gradient = CGGradientCreateWithColors(NULL, cfc, NULL);
-    CFRelease(cfc);
-    CGColorRelease(c[0]);
-    CGColorRelease(c[1]);
-    if (color_style.gradient.direction == TR_TO_BL) {
-      gradient_direction[0] = CGPointMake(frame.size.width,
-                                          frame.size.height);
-      gradient_direction[1] = CGPointZero;
-    } else if (color_style.gradient.direction == TL_TO_BR) {
-      gradient_direction[0] = CGPointMake(0, frame.size.height);
-      gradient_direction[1] = CGPointMake(frame.size.width, 0);
-    }
+    CGAffineTransform trans = CGAffineTransformMakeScale(frame.size.width,
+                                                         frame.size.height);
+    gradient = drawing_create_gradient(&color_style.gradient,
+                                       trans,
+                                       gradient_dir          );
   }
 
   CGContextSetLineWidth(border->context, settings->border_width);
   CGContextClearRect(border->context, frame);
 
   CGRect path_rect = border->drawing_bounds;
-  CGMutablePathRef clip_path = CGPathCreateMutable();
   CGMutablePathRef inner_clip_path = CGPathCreateMutable();
-  CGPathAddRect(clip_path, NULL, frame);
-
   if (settings->border_style == BORDER_STYLE_SQUARE
       && settings->border_order == BORDER_ORDER_ABOVE
       && settings->border_width >= BORDER_TSMW) {
@@ -161,54 +134,35 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                          BORDER_INNER_RADIUS,
                          BORDER_INNER_RADIUS              );
   }
-
-  CGPathAddPath(clip_path, NULL, inner_clip_path);
-  CGContextAddPath(border->context, clip_path);
-  CGContextEOClip(border->context);
+  drawing_clip_between_rect_and_path(border->context, frame, inner_clip_path);
 
   if (settings->border_style == BORDER_STYLE_SQUARE) {
-    CGRect square_rect = CGRectInset(path_rect,
-                                     -settings->border_width / 2.f,
-                                     -settings->border_width / 2.f );
-
-    CGPathRef square_path = CGPathCreateWithRect(square_rect, NULL);
-    CGContextAddPath(border->context, square_path);
-
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
-      CGContextFillPath(border->context);
+      drawing_draw_square_with_inset(border->context,
+                                     path_rect,
+                                     -settings->border_width / 2.f);
     }
     else if (color_style.stype == COLOR_STYLE_GRADIENT) {
-      CGContextClip(border->context);
-      CGContextDrawLinearGradient(border->context,
-                                  gradient,
-                                  gradient_direction[0],
-                                  gradient_direction[1],
-                                  0                     );
+      drawing_draw_square_gradient_with_inset(border->context,
+                                              gradient,
+                                              gradient_dir,
+                                              path_rect,
+                                              -settings->border_width / 2.f);
     }
-    CFRelease(square_path);
   } else {
-    CGPathRef stroke_path = CGPathCreateWithRoundedRect(path_rect,
-                                                        BORDER_RADIUS,
-                                                        BORDER_RADIUS,
-                                                        NULL          );
-
-    CGContextAddPath(border->context, stroke_path);
-
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
-      CGContextStrokePath(border->context);
+      drawing_draw_rounded_rect_with_inset(border->context,
+                                           path_rect,
+                                           BORDER_RADIUS   );
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
-      CGContextReplacePathWithStrokedPath(border->context);
-      CGContextClip(border->context);
-      CGContextDrawLinearGradient(border->context,
-                                  gradient,
-                                  gradient_direction[0],
-                                  gradient_direction[1],
-                                  0                     );
+      drawing_draw_rounded_gradient_with_inset(border->context,
+                                               gradient,
+                                               gradient_dir,
+                                               path_rect,
+                                               BORDER_RADIUS   );
     }
-
-    CFRelease(stroke_path);
   }
   CGGradientRelease(gradient);
 
@@ -218,16 +172,11 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
     color_style = settings->background;
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
-      float a,r,g,b;
-      colors_from_hex(color_style.color, &a, &r, &g, &b);
-      CGContextSetRGBFillColor(border->context, r, g, b, a);
-      CGContextSetRGBStrokeColor(border->context, 0, 0, 0, 0);
-
-      CGContextAddPath(border->context, inner_clip_path);
-      CGContextFillPath(border->context);
+      drawing_draw_filled_path(border->context,
+                               inner_clip_path,
+                               color_style.color);
     }
   }
-  CFRelease(clip_path);
   CFRelease(inner_clip_path);
   CGContextFlush(border->context);
   CGContextRestoreGState(border->context);

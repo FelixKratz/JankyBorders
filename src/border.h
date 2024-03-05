@@ -47,6 +47,7 @@ struct settings {
 
 struct border {
   pthread_mutex_t mutex;
+  int cid;
 
   bool focused;
   bool needs_redraw;
@@ -74,12 +75,12 @@ struct border {
 };
 
 void border_init(struct border* border);
-void border_destroy(struct border* border, int cid);
-void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged, bool hidpi);
+void border_destroy(struct border* border);
+void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi);
 
-void border_move(struct border* border, int cid);
-void border_update(struct border* border, int cid, bool try_async);
-void border_hide(struct border* border, int cid);
-void border_unhide(struct border* border, int cid);
+void border_move(struct border* border);
+void border_update(struct border* border, bool try_async);
+void border_hide(struct border* border);
+void border_unhide(struct border* border);
 
 struct settings* border_get_settings(struct border* border);

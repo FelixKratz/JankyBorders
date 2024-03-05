@@ -7,7 +7,7 @@
 
 #define _YABAI_INTEGRATION
 
-void border_update_internal(struct border* border, int cid, struct settings* settings);
+void border_update_internal(struct border* border, struct settings* settings);
 
 struct track_transform_payload {
   int cid;
@@ -69,7 +69,7 @@ static void* yabai_proxy_begin_proc(void* context) {
 
   if (!proxy->is_proxy) {
     proxy->is_proxy = true;
-    border_update_internal(proxy, cid, &info->settings);
+    border_update_internal(proxy, &info->settings);
 
     CFTypeRef transaction = SLSTransactionCreate(cid);
     SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
@@ -111,7 +111,7 @@ static void* yabai_proxy_end_proc(void* context) {
   pthread_mutex_lock(&border->mutex);
   border->disable_coalescing = true;
   border->external_proxy_wid = 0;
-  border_update_internal(border, cid, &info->settings);
+  border_update_internal(border, &info->settings);
   border->disable_coalescing = false;
   pthread_mutex_unlock(&border->mutex);
   free(context);
@@ -128,7 +128,7 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
     if (!border->proxy) {
       border->proxy = malloc(sizeof(struct border));
       border_init(border->proxy);
-      border_create_window(border->proxy, cid, CGRectNull, true, false);
+      border_create_window(border->proxy, CGRectNull, true, false);
       border->proxy->target_bounds = border->target_bounds;
       border->proxy->focused = border->focused;
       border->proxy->target_wid = border->target_wid;
@@ -172,7 +172,7 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     SLSTransactionCommit(transaction, 1);
     CFRelease(transaction);
 
-    border_destroy(proxy, cid);
+    border_destroy(proxy);
 
     struct yabai_proxy_payload* payload
                                   = malloc(sizeof(struct yabai_proxy_payload));

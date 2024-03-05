@@ -61,7 +61,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
           border->target_wid = wid;
           border->sid = sid;
-          border_update(border, cid, false);
+          border_update(border, false);
           windows_update_notifications(windows);
         }
       }
@@ -75,13 +75,12 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 }
 
 static void windows_remove_all(struct table* windows) {
-  int cid = SLSMainConnectionID();
   for (int i = 0; i < windows->capacity; ++i) {
     struct bucket* bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
         struct border* border = bucket->value;
-        border_destroy(border, cid);
+        border_destroy(border);
       }
       bucket = bucket->next;
     }
@@ -96,7 +95,6 @@ void windows_recreate_all_borders(struct table* windows) {
 }
 
 void windows_update_all(struct table* windows) {
-  int cid = SLSMainConnectionID();
   for (int i = 0; i < windows->capacity; ++i) {
     struct bucket* bucket = windows->buckets[i];
     while (bucket) {
@@ -104,7 +102,7 @@ void windows_update_all(struct table* windows) {
         struct border* border = bucket->value;
         if (border) {
           border->needs_redraw = true;
-          border_update(border, cid, true);
+          border_update(border, true);
         }
       }
       bucket = bucket->next;
@@ -113,7 +111,6 @@ void windows_update_all(struct table* windows) {
 }
 
 void windows_update_active(struct table* windows) {
-  int cid = SLSMainConnectionID();
   for (int i = 0; i < windows->capacity; ++i) {
     struct bucket* bucket = windows->buckets[i];
     while (bucket) {
@@ -121,7 +118,7 @@ void windows_update_active(struct table* windows) {
         struct border* border = bucket->value;
         if (border && border->focused) {
           border->needs_redraw = true;
-          border_update(border, cid, true);
+          border_update(border, true);
         }
       }
       bucket = bucket->next;
@@ -130,7 +127,6 @@ void windows_update_active(struct table* windows) {
 }
 
 void windows_update_inactive(struct table* windows) {
-  int cid = SLSMainConnectionID();
   for (int i = 0; i < windows->capacity; ++i) {
     struct bucket* bucket = windows->buckets[i];
     while (bucket) {
@@ -138,7 +134,7 @@ void windows_update_inactive(struct table* windows) {
         struct border* border = bucket->value;
         if (border && !border->focused) {
           border->needs_redraw = true;
-          border_update(border, cid, true);
+          border_update(border, true);
         }
       }
       bucket = bucket->next;
@@ -148,7 +144,7 @@ void windows_update_inactive(struct table* windows) {
 
 void windows_window_update(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_update(border, SLSMainConnectionID(), false);
+  if (border) border_update(border, false);
 }
 
 static bool windows_window_focus(struct table* windows, uint32_t wid) {
@@ -162,13 +158,13 @@ static bool windows_window_focus(struct table* windows, uint32_t wid) {
         if (border->focused && border->target_wid != wid) {
           border->focused = false;
           border->needs_redraw = true;
-          border_update(border, cid, true);
+          border_update(border, true);
         }
 
         if (!border->focused && border->target_wid == wid) {
           border->focused = true;
           border->needs_redraw = true;
-          border_update(border, cid, true);
+          border_update(border, true);
         }
 
         if (border->target_wid == wid) found_window = true;
@@ -182,24 +178,24 @@ static bool windows_window_focus(struct table* windows, uint32_t wid) {
 
 void windows_window_move(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_move(border, SLSMainConnectionID());
+  if (border) border_move(border);
 }
 
 void windows_window_hide(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_hide(border, SLSMainConnectionID());
+  if (border) border_hide(border);
 }
 
 void windows_window_unhide(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_unhide(border, SLSMainConnectionID());
+  if (border) border_unhide(border);
 }
 
 bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
   struct border* border = table_find(windows, &wid);
   if (border && (border->sid == sid || border->sticky)) {
     table_remove(windows, &wid);
-    border_destroy(border, SLSMainConnectionID());
+    border_destroy(border);
     windows_update_notifications(windows);
     return true;
   }
@@ -279,7 +275,7 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
           if (window_suitable(iterator)) {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
             struct border* border = table_find(windows, &wid);
-            if (border) border_update(border, cid, true);
+            if (border) border_update(border, true);
             else {
               debug("Creating Missing Window: %d\n", wid);
               windows_window_create(windows, wid, window_space_id(cid, wid));

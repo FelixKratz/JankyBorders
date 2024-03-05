@@ -12,6 +12,7 @@ void border_init(struct border* border) {
   pthread_mutexattr_init(&mattr);
   pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&border->mutex, &mattr);
+  SLSNewConnection(0, &border->cid);
 }
 
 struct settings* border_get_settings(struct border* border) {
@@ -21,8 +22,8 @@ struct settings* border_get_settings(struct border* border) {
          : &g_settings;
 }
 
-static void border_destroy_window(struct border* border, int cid) {
-  if (border->wid) SLSReleaseWindow(cid, border->wid);
+static void border_destroy_window(struct border* border) {
+  if (border->wid) SLSReleaseWindow(border->cid, border->wid);
   if (border->context) CGContextRelease(border->context);
   border->wid = 0;
   border->context = NULL;
@@ -37,9 +38,9 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
   return false;
 }
 
-static bool border_coalesce_resize_and_move_events(struct border* border, int cid, CGRect* frame) {
+static bool border_coalesce_resize_and_move_events(struct border* border, CGRect* frame) {
   if (border->disable_coalescing || !border->wid) {
-    SLSGetWindowBounds(cid, border->target_wid, frame);
+    SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return true;
   }
   int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
@@ -47,14 +48,14 @@ static bool border_coalesce_resize_and_move_events(struct border* border, int ci
   border->last_coalesce_attempt = now;
 
   CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
   if (!CGRectEqualToRect(window_frame, border->target_bounds)
       && dt > (1ULL << 27)                                   ) {
     pthread_mutex_unlock(&border->mutex);
     usleep(15000);
     pthread_mutex_lock(&border->mutex);
     if (border->external_proxy_wid) return false;
-    SLSGetWindowBounds(cid, border->target_wid, frame);
+    SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return CGRectEqualToRect(window_frame, *frame);
   }
 
@@ -62,19 +63,17 @@ static bool border_coalesce_resize_and_move_events(struct border* border, int ci
   return true;
 }
 
-static bool border_calculate_bounds(struct border* border, int cid, CGRect* frame, struct settings* settings) {
+static bool border_calculate_bounds(struct border* border, CGRect* frame, struct settings* settings) {
   CGRect window_frame;
   if (border->is_proxy) window_frame = border->target_bounds;
-  else if (!border_coalesce_resize_and_move_events(border,
-                                                   cid,
-                                                   &window_frame)) {
+  else if (!border_coalesce_resize_and_move_events(border, &window_frame)) {
     return false;
   }
   border->target_bounds = window_frame;
 
   border->too_small = border_check_too_small(border, window_frame);
   if (border->too_small) {
-    border_hide(border, cid);
+    border_hide(border);
     return false;
   }
 
@@ -182,11 +181,12 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
   CGContextRestoreGState(border->context);
 }
 
-void border_update_internal(struct border* border, int cid, struct settings* settings) {
+void border_update_internal(struct border* border, struct settings* settings) {
   if (border->external_proxy_wid) return;
 
+  int cid = border->cid;
   CGRect frame;
-  if (!border_calculate_bounds(border, cid, &frame, settings)) return;
+  if (!border_calculate_bounds(border, &frame, settings)) return;
 
   uint64_t tags = window_tags(cid, border->target_wid);
   border->sticky = tags & WINDOW_TAG_STICKY;
@@ -196,7 +196,7 @@ void border_update_internal(struct border* border, int cid, struct settings* set
   bool shown = false;
   SLSWindowIsOrderedIn(cid, border->target_wid, &shown);
   if (!shown && !border->is_proxy) {
-    border_hide(border, cid);
+    border_hide(border);
     return;
   } 
 
@@ -205,7 +205,6 @@ void border_update_internal(struct border* border, int cid, struct settings* set
 
   if (!border->wid) {
     border_create_window(border,
-                         cid,
                          frame,
                          border->is_proxy,
                          settings->hidpi  );
@@ -268,18 +267,18 @@ static void* border_update_async_proc(void* context) {
   struct {
     struct border* border;
     struct settings settings;
-    int cid;
   }* payload = context;
 
   pthread_mutex_lock(&payload->border->mutex);
-  border_update_internal(payload->border, payload->cid, &payload->settings);
+  border_update_internal(payload->border, &payload->settings);
   pthread_mutex_unlock(&payload->border->mutex);
   free(payload);
   return NULL;
 }
 
-void border_create_window(struct border* border, int cid, CGRect frame, bool unmanaged, bool hidpi) {
+void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi) {
   pthread_mutex_lock(&border->mutex);
+  int cid = border->cid;
   border->wid = window_create(cid, frame, hidpi, unmanaged);
 
   border->frame = frame;
@@ -292,22 +291,23 @@ void border_create_window(struct border* border, int cid, CGRect frame, bool unm
   pthread_mutex_unlock(&border->mutex);
 }
 
-void border_destroy(struct border* border, int cid) {
+void border_destroy(struct border* border) {
   pthread_mutex_lock(&border->mutex);
-  border_destroy_window(border, cid);
-  if (border->proxy) border_destroy(border->proxy, cid);
+  border_destroy_window(border);
+  if (border->proxy) border_destroy(border->proxy);
   pthread_mutex_unlock(&border->mutex);
+  SLSReleaseConnection(border->cid);
   free(border);
 }
 
-void border_move(struct border* border, int cid) {
+void border_move(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   if (border->external_proxy_wid) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
   CGRect window_frame;
-  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
 
   struct settings* settings = border_get_settings(border);
   CGPoint origin = { .x = window_frame.origin.x
@@ -317,7 +317,7 @@ void border_move(struct border* border, int cid) {
                           - settings->border_width
                           - BORDER_PADDING          };
 
-  CFTypeRef transaction = SLSTransactionCreate(cid);
+  CFTypeRef transaction = SLSTransactionCreate(border->cid);
   SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
   SLSTransactionCommit(transaction, 0);
   CFRelease(transaction);
@@ -326,11 +326,11 @@ void border_move(struct border* border, int cid) {
   pthread_mutex_unlock(&border->mutex);
 }
 
-void border_update(struct border* border, int cid, bool try_async) {
+void border_update(struct border* border, bool try_async) {
   pthread_mutex_lock(&border->mutex);
   struct settings* settings = border_get_settings(border);
   if (!border->wid || !try_async) {
-    border_update_internal(border, cid, settings);
+    border_update_internal(border, settings);
     pthread_mutex_unlock(&border->mutex);
     return;
   }
@@ -338,11 +338,9 @@ void border_update(struct border* border, int cid, bool try_async) {
   struct payload {
     struct border* border;
     struct settings settings;
-    int cid;
   }* payload = malloc(sizeof(struct payload));
 
   payload->border = border;
-  payload->cid = cid;
   payload->settings = *settings;
 
   pthread_t thread;
@@ -351,10 +349,10 @@ void border_update(struct border* border, int cid, bool try_async) {
   pthread_mutex_unlock(&border->mutex);
 }
 
-void border_hide(struct border* border, int cid) {
+void border_hide(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   if (border->wid) {
-    CFTypeRef transaction = SLSTransactionCreate(cid);
+    CFTypeRef transaction = SLSTransactionCreate(border->cid);
     SLSTransactionOrderWindow(transaction, border->wid, 0, border->target_wid);
     SLSTransactionCommit(transaction, 0);
     CFRelease(transaction);
@@ -362,18 +360,18 @@ void border_hide(struct border* border, int cid) {
   pthread_mutex_unlock(&border->mutex);
 }
 
-void border_unhide(struct border* border, int cid) {
+void border_unhide(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   if (border->too_small
       || border->external_proxy_wid
-      || (!border->sticky && !is_space_visible(cid, border->sid))) {
+      || (!border->sticky && !is_space_visible(border->cid, border->sid))) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
 
   if (border->wid) {
     struct settings* settings = border_get_settings(border);
-    CFTypeRef transaction = SLSTransactionCreate(cid);
+    CFTypeRef transaction = SLSTransactionCreate(border->cid);
     SLSTransactionOrderWindow(transaction,
                               border->wid,
                               settings->border_order,
@@ -381,6 +379,6 @@ void border_unhide(struct border* border, int cid) {
     SLSTransactionCommit(transaction, 0);
     CFRelease(transaction);
 
-  } else border_update(border, cid, false);
+  } else border_update(border, false);
   pthread_mutex_unlock(&border->mutex);
 }

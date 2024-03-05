@@ -66,11 +66,12 @@ struct border {
   CGRect drawing_bounds;
   CGContextRef context;
 
+  bool disable_coalescing;
   int64_t last_coalesce_attempt;
 
   bool is_proxy;
-  uint32_t proxy_wid;
   struct border* proxy;
+  uint32_t external_proxy_wid;
 };
 
 void border_init(struct border* border);

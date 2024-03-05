@@ -10,16 +10,17 @@
 struct track_transform_payload {
   int cid;
   uint32_t border_wid;
+  uint32_t proxy_wid;
   uint32_t target_wid;
   uint64_t frame_delay;
   CGAffineTransform initial_transform;
 };
 
 struct yabai_proxy_payload {
-  struct border* proxy;
+  union { struct border* proxy; struct border* border; };
   uint32_t border_wid;
   uint32_t real_wid;
-  uint32_t proxy_wid;
+  uint32_t external_proxy_wid;
   int cid;
 };
 
@@ -42,7 +43,7 @@ static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp*
   border_transform = CGAffineTransformConcat(target_transform,
                                              payload->initial_transform);
 
-  SLSSetWindowTransform(payload->cid, payload->border_wid, border_transform);
+  SLSSetWindowTransform(payload->cid, payload->proxy_wid, border_transform);
   return kCVReturnSuccess;
 }
 
@@ -77,10 +78,11 @@ static void* yabai_proxy_begin_proc(void* context) {
                             = malloc(sizeof(struct track_transform_payload));
 
   CGRect proxy_frame;
-  SLSGetWindowBounds(cid, info->proxy_wid, &proxy_frame);
+  SLSGetWindowBounds(cid, info->external_proxy_wid, &proxy_frame);
 
-  payload->border_wid = proxy->wid;
-  payload->target_wid = info->proxy_wid;
+  payload->proxy_wid = proxy->wid;
+  payload->border_wid = info->border_wid;
+  payload->target_wid = info->external_proxy_wid;
   payload->cid = cid;
 
   payload->initial_transform = CGAffineTransformIdentity;
@@ -99,12 +101,27 @@ static void* yabai_proxy_begin_proc(void* context) {
   return NULL;
 }
 
+static void* yabai_proxy_end_proc(void* context) {
+  struct yabai_proxy_payload* info = context;
+  struct border* border = info->border;
+  int cid = info->cid;
+  pthread_mutex_lock(&border->mutex);
+  border->disable_coalescing = true;
+  border->external_proxy_wid = 0;
+  border_update(border, cid, false);
+  border->disable_coalescing = false;
+  pthread_mutex_unlock(&border->mutex);
+  free(context);
+  return NULL;
+}
+
 static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wid, uint32_t real_wid) {
   if (!real_wid) return;
   struct border* border = table_find(windows, &real_wid);
 
   if (border) {
-    border->proxy_wid = wid;
+    pthread_mutex_lock(&border->mutex);
+    border->external_proxy_wid = wid;
     if (!border->proxy) {
       border->proxy = malloc(sizeof(struct border));
       border_init(border->proxy);
@@ -119,21 +136,22 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
                             = malloc(sizeof(struct yabai_proxy_payload));
     payload->proxy = border->proxy;
     payload->border_wid = border->wid;
-    payload->proxy_wid = wid;
+    payload->external_proxy_wid = border->external_proxy_wid;
     payload->real_wid = real_wid;
     payload->cid = cid;
 
     pthread_t thread;
     pthread_create(&thread, NULL, yabai_proxy_begin_proc, payload);
     pthread_detach(thread);
+    pthread_mutex_unlock(&border->mutex);
   }
 }
 
 static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid, uint32_t real_wid) {
   struct border* border = (struct border*)table_find(windows, &real_wid);
-  if (border && border->proxy && border->proxy_wid == wid) {
+  if (border) pthread_mutex_lock(&border->mutex);
+  if (border && border->proxy && border->external_proxy_wid == wid) {
     struct border* proxy = border->proxy;
-    border->proxy_wid = 0;
     border->proxy = NULL;
 
     CGAffineTransform transform;
@@ -151,8 +169,19 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     CFRelease(transaction);
 
     border_destroy(proxy, cid);
-    border_update(border, cid, true);
+
+    struct yabai_proxy_payload* payload
+                                  = malloc(sizeof(struct yabai_proxy_payload));
+
+    payload->border = border;
+    payload->border_wid = border->wid;
+    payload->cid = cid;
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, yabai_proxy_end_proc, payload);
+    pthread_detach(thread);
   }
+  if (border) pthread_mutex_unlock(&border->mutex);
 }
 
 static void yabai_message(CFMachPortRef port, void* data, CFIndex size, void* context) {
@@ -192,9 +221,7 @@ static inline void yabai_register_mach_port(struct table* windows) {
     return;
   }
 
-  struct mach_port_limits limits = {};
-  limits.mpl_qlimit = MACH_PORT_QLIMIT_LARGE;
-
+  struct mach_port_limits limits = { 1 };
   if (mach_port_set_attributes(task,
                                port,
                                MACH_PORT_LIMITS_INFO,

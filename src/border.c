@@ -30,23 +30,39 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
   return false;
 }
 
-static void border_coalesce_resize_and_move_events(struct border* border, int cid, CGPoint* origin) {
-  int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
-  if (now - border->last_coalesce_attempt > (1ULL << 30)) {
-    usleep(15000);
-    CGRect window_frame;
-    SLSGetWindowBounds(cid, border->target_wid, &window_frame);
-    float border_offset = - g_settings.border_width - BORDER_PADDING;
-    window_frame = CGRectInset(window_frame, border_offset, border_offset);
-    *origin = window_frame.origin;
+static bool border_coalesce_resize_and_move_events(struct border* border, int cid, CGRect* frame) {
+  if (border->disable_coalescing || !border->wid) {
+    SLSGetWindowBounds(cid, border->target_wid, frame);
+    return true;
   }
+  int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
+  int64_t dt = now - border->last_coalesce_attempt;
   border->last_coalesce_attempt = now;
+
+  CGRect window_frame;
+  SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  if (!CGRectEqualToRect(window_frame, border->target_bounds)
+      && dt > (1ULL << 27)                                   ) {
+    pthread_mutex_unlock(&border->mutex);
+    usleep(15000);
+    pthread_mutex_lock(&border->mutex);
+    if (border->external_proxy_wid) return false;
+    SLSGetWindowBounds(cid, border->target_wid, frame);
+    return CGRectEqualToRect(window_frame, *frame);
+  }
+
+  *frame = window_frame;
+  return true;
 }
 
 static bool border_calculate_bounds(struct border* border, int cid, CGRect* frame) {
   CGRect window_frame;
   if (border->is_proxy) window_frame = border->target_bounds;
-  else SLSGetWindowBounds(cid, border->target_wid, &window_frame);
+  else if (!border_coalesce_resize_and_move_events(border,
+                                                   cid,
+                                                   &window_frame)) {
+    return false;
+  }
   border->target_bounds = window_frame;
 
   border->too_small = border_check_too_small(border, window_frame);
@@ -58,14 +74,9 @@ static bool border_calculate_bounds(struct border* border, int cid, CGRect* fram
   float border_offset = - g_settings.border_width - BORDER_PADDING;
   *frame = CGRectInset(window_frame, border_offset, border_offset);
 
-  bool needs_move = !CGPointEqualToPoint(border->origin, frame->origin);
   border->origin = frame->origin;
   frame->origin = CGPointZero;
-  bool needs_resize = !CGRectEqualToRect(border->frame, *frame);
 
-  if (!border->is_proxy && needs_resize && !needs_move) {
-    border_coalesce_resize_and_move_events(border, cid, &border->origin);
-  }
 
   window_frame.origin = (CGPoint){ -border_offset, -border_offset };
   border->drawing_bounds = window_frame;
@@ -216,7 +227,10 @@ static void border_draw(struct border* border, CGRect frame) {
 }
 
 static void border_update_internal(struct border* border, int cid) {
-  if (border->proxy_wid) return;
+  if (border->external_proxy_wid) return;
+
+  CGRect frame;
+  if (!border_calculate_bounds(border, cid, &frame)) return;
 
   uint64_t tags = window_tags(cid, border->target_wid);
   border->sticky = tags & WINDOW_TAG_STICKY;
@@ -230,8 +244,6 @@ static void border_update_internal(struct border* border, int cid) {
     return;
   } 
 
-  CGRect frame;
-  if (!border_calculate_bounds(border, cid, &frame)) return;
   int level = window_level(cid, border->target_wid);
   int sub_level = window_sub_level(border->target_wid);
 
@@ -326,7 +338,7 @@ void border_destroy(struct border* border, int cid) {
 
 void border_move(struct border* border, int cid) {
   pthread_mutex_lock(&border->mutex);
-  if (border->proxy_wid) {
+  if (border->external_proxy_wid) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
@@ -381,7 +393,7 @@ void border_hide(struct border* border, int cid) {
 void border_unhide(struct border* border, int cid) {
   pthread_mutex_lock(&border->mutex);
   if (border->too_small
-      || border->proxy_wid
+      || border->external_proxy_wid
       || (!border->sticky && !is_space_visible(cid, border->sid))) {
     pthread_mutex_unlock(&border->mutex);
     return;

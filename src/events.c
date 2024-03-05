@@ -6,6 +6,7 @@
 extern struct table g_windows;
 extern pid_t g_pid;
 
+#ifdef DEBUG
 static void dump_event(void* data, size_t data_length) {
   for (int i = 0; i < data_length; i++) {
     printf("%02x ", *((unsigned char*)data + i));
@@ -18,6 +19,7 @@ static void event_watcher(uint32_t event, void* data, size_t data_length, void* 
   printf("(%d) Event: %d; Payload:\n", ++count, event);
   dump_event(data, data_length);
 }
+#endif
 
 struct window_spawn_data {
   uint64_t sid;

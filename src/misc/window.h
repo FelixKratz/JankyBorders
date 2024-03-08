@@ -222,11 +222,12 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
 
 static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unmanaged) {
   uint32_t id;
-  CFTypeRef frame_region;
+  CFTypeRef frame_region = NULL;
   uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
   uint64_t clear_tags = 0;
 
   CGSNewRegionWithRect(&frame, &frame_region);
+  assert(frame_region != NULL);
 
   if (unmanaged) {
     CFTypeRef empty_region = CGRegionCreateEmptyRegion();
@@ -254,6 +255,7 @@ static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unm
   CFRelease(frame_region);
 
   uint32_t wid = id;
+  assert(wid != 0);
 
   SLSSetWindowResolution(cid, wid, hidpi ? 2.0f : 1.0f);
   SLSSetWindowTags(cid, wid, &set_tags, 64);

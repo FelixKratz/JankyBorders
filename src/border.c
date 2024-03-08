@@ -211,6 +211,8 @@ void border_update_internal(struct border* border, struct settings* settings) {
   }
 
   CFTypeRef transaction = SLSTransactionCreate(cid);
+  if (!transaction) return;
+
   if (!CGRectEqualToRect(frame, border->frame)) {
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
@@ -235,6 +237,7 @@ void border_update_internal(struct border* border, struct settings* settings) {
 
     border_draw(border, frame, settings);
     transaction = SLSTransactionCreate(cid);
+    if(!transaction) return;
   }
   CGAffineTransform transform = CGAffineTransformIdentity;
   transform.tx = -border->origin.x;
@@ -318,9 +321,11 @@ void border_move(struct border* border) {
                           - BORDER_PADDING          };
 
   CFTypeRef transaction = SLSTransactionCreate(border->cid);
-  SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
-  SLSTransactionCommit(transaction, 0);
-  CFRelease(transaction);
+  if (transaction) {
+    SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
+    SLSTransactionCommit(transaction, 1);
+    CFRelease(transaction);
+  }
   border->target_bounds = window_frame;
   border->origin = origin;
   pthread_mutex_unlock(&border->mutex);
@@ -353,9 +358,14 @@ void border_hide(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   if (border->wid) {
     CFTypeRef transaction = SLSTransactionCreate(border->cid);
-    SLSTransactionOrderWindow(transaction, border->wid, 0, border->target_wid);
-    SLSTransactionCommit(transaction, 0);
-    CFRelease(transaction);
+    if (transaction) {
+      SLSTransactionOrderWindow(transaction,
+                                border->wid,
+                                0,
+                                border->target_wid);
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
   }
   pthread_mutex_unlock(&border->mutex);
 }
@@ -372,13 +382,14 @@ void border_unhide(struct border* border) {
   if (border->wid) {
     struct settings* settings = border_get_settings(border);
     CFTypeRef transaction = SLSTransactionCreate(border->cid);
-    SLSTransactionOrderWindow(transaction,
-                              border->wid,
-                              settings->border_order,
-                              border->target_wid      );
-    SLSTransactionCommit(transaction, 0);
-    CFRelease(transaction);
-
+    if (transaction) {
+      SLSTransactionOrderWindow(transaction,
+                                border->wid,
+                                settings->border_order,
+                                border->target_wid      );
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
   } else border_update(border, false);
   pthread_mutex_unlock(&border->mutex);
 }

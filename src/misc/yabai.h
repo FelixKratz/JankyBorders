@@ -72,10 +72,12 @@ static void* yabai_proxy_begin_proc(void* context) {
     border_update_internal(proxy, &info->settings);
 
     CFTypeRef transaction = SLSTransactionCreate(cid);
-    SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
-    SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
-    SLSTransactionCommit(transaction, 1);
-    CFRelease(transaction);
+    if (transaction) {
+      SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
+      SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
   }
   struct track_transform_payload* payload
                             = malloc(sizeof(struct track_transform_payload));
@@ -107,7 +109,6 @@ static void* yabai_proxy_begin_proc(void* context) {
 static void* yabai_proxy_end_proc(void* context) {
   struct yabai_proxy_payload* info = context;
   struct border* border = info->border;
-  int cid = info->cid;
   pthread_mutex_lock(&border->mutex);
   border->disable_coalescing = true;
   border->external_proxy_wid = 0;
@@ -161,16 +162,18 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     CGAffineTransform transform;
     SLSGetWindowTransform(cid, proxy->wid, &transform);
     CFTypeRef transaction = SLSTransactionCreate(cid);
-    SLSTransactionSetWindowTransform(transaction,
-                                     border->wid,
-                                     0,
-                                     0,
-                                     transform   );
+    if (transaction) {
+      SLSTransactionSetWindowTransform(transaction,
+                                       border->wid,
+                                       0,
+                                       0,
+                                       transform   );
 
-    SLSTransactionSetWindowAlpha(transaction, proxy->wid, 0.f);
-    SLSTransactionSetWindowAlpha(transaction, border->wid, 1.f);
-    SLSTransactionCommit(transaction, 1);
-    CFRelease(transaction);
+      SLSTransactionSetWindowAlpha(transaction, proxy->wid, 0.f);
+      SLSTransactionSetWindowAlpha(transaction, border->wid, 1.f);
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
 
     border_destroy(proxy);
 

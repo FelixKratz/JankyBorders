@@ -149,7 +149,6 @@ void windows_window_update(struct table* windows, uint32_t wid) {
 
 static bool windows_window_focus(struct table* windows, uint32_t wid) {
   bool found_window = false;
-  int cid = SLSMainConnectionID();
   for (int i = 0; i < windows->capacity; ++i) {
     struct bucket* bucket = windows->buckets[i];
     while (bucket) {

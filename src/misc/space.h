@@ -23,6 +23,7 @@ static inline uint64_t get_active_space_id(int cid) {
     uuid_ref = SLSCopyActiveMenuBarDisplayIdentifier(cid);
   }
 
+  if (!uuid_ref) return 0;
   uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, uuid_ref);
   CFRelease(uuid_ref);
   return sid;
@@ -30,6 +31,7 @@ static inline uint64_t get_active_space_id(int cid) {
 
 static inline bool is_space_visible(int cid, uint64_t sid) {
   CFArrayRef displays = SLSCopyManagedDisplays(cid);
+  if (!displays) return false;
   uint32_t space_count = CFArrayGetCount(displays);
 
   for (int i = 0; i < space_count; i++) {

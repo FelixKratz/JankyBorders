@@ -24,7 +24,6 @@ struct yabai_proxy_payload {
   uint32_t border_wid;
   uint32_t real_wid;
   uint32_t external_proxy_wid;
-  int cid;
 };
 
 static CVReturn frame_callback(CVDisplayLinkRef display_link, const CVTimeStamp* now, const CVTimeStamp* output_time, CVOptionFlags flags, CVOptionFlags* flags_out, void* context) {
@@ -64,14 +63,13 @@ static inline void border_track_transform(struct track_transform_payload* payloa
 static void* yabai_proxy_begin_proc(void* context) {
   struct yabai_proxy_payload* info = context;
   struct border* proxy = info->proxy;
-  int cid = info->cid;
   pthread_mutex_lock(&proxy->mutex);
 
   if (!proxy->is_proxy) {
     proxy->is_proxy = true;
     border_update_internal(proxy, &info->settings);
 
-    CFTypeRef transaction = SLSTransactionCreate(cid);
+    CFTypeRef transaction = SLSTransactionCreate(proxy->cid);
     if (transaction) {
       SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
       SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
@@ -83,12 +81,12 @@ static void* yabai_proxy_begin_proc(void* context) {
                             = malloc(sizeof(struct track_transform_payload));
 
   CGRect proxy_frame;
-  SLSGetWindowBounds(cid, info->external_proxy_wid, &proxy_frame);
+  SLSGetWindowBounds(proxy->cid, info->external_proxy_wid, &proxy_frame);
 
   payload->proxy_wid = proxy->wid;
   payload->border_wid = info->border_wid;
   payload->target_wid = info->external_proxy_wid;
-  payload->cid = cid;
+  payload->cid = proxy->cid;
 
   payload->initial_transform = CGAffineTransformIdentity;
   payload->initial_transform.a = proxy->target_bounds.size.width
@@ -119,7 +117,7 @@ static void* yabai_proxy_end_proc(void* context) {
   return NULL;
 }
 
-static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wid, uint32_t real_wid) {
+static inline void yabai_proxy_begin(struct table* windows, uint32_t wid, uint32_t real_wid) {
   if (!real_wid) return;
   struct border* border = table_find(windows, &real_wid);
 
@@ -142,7 +140,6 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
     payload->border_wid = border->wid;
     payload->external_proxy_wid = border->external_proxy_wid;
     payload->real_wid = real_wid;
-    payload->cid = cid;
     payload->settings = *border_get_settings(border);
 
     pthread_t thread;
@@ -152,7 +149,7 @@ static inline void yabai_proxy_begin(struct table* windows, int cid, uint32_t wi
   }
 }
 
-static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid, uint32_t real_wid) {
+static inline void yabai_proxy_end(struct table* windows, uint32_t wid, uint32_t real_wid) {
   struct border* border = (struct border*)table_find(windows, &real_wid);
   if (border) pthread_mutex_lock(&border->mutex);
   if (border && border->proxy && border->external_proxy_wid == wid) {
@@ -160,8 +157,8 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
     border->proxy = NULL;
 
     CGAffineTransform transform;
-    SLSGetWindowTransform(cid, proxy->wid, &transform);
-    CFTypeRef transaction = SLSTransactionCreate(cid);
+    SLSGetWindowTransform(border->cid, proxy->wid, &transform);
+    CFTypeRef transaction = SLSTransactionCreate(border->cid);
     if (transaction) {
       SLSTransactionSetWindowTransform(transaction,
                                        border->wid,
@@ -182,7 +179,6 @@ static inline void yabai_proxy_end(struct table* windows, int cid, uint32_t wid,
 
     payload->border = border;
     payload->border_wid = border->wid;
-    payload->cid = cid;
     payload->settings = *border_get_settings(border);
 
     pthread_t thread;
@@ -206,12 +202,10 @@ static void yabai_message(CFMachPortRef port, void* data, CFIndex size, void* co
       payload = *(struct payload*)message->descriptor.address;
       if (payload.event == 1325) {
         yabai_proxy_begin(context,
-                          SLSMainConnectionID(),
                           payload.proxy_wid,
                           payload.real_wid  );
       } else if (payload.event == 1326) {
         yabai_proxy_end(context,
-                        SLSMainConnectionID(),
                         payload.proxy_wid,
                         payload.real_wid      );
       }

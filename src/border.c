@@ -45,16 +45,17 @@ static bool border_coalesce_resize_and_move_events(struct border* border, CGRect
   }
   int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
   int64_t dt = now - border->last_coalesce_attempt;
-  static const int timeout = 15000;
-  if (dt < timeout * 1000) {
-    return false;
-  }
+  border->last_coalesce_attempt = now;
+
+  static const int timeout = 20000;
+  if (now - border->last_coalesce_success < timeout * 1000) return false;
 
   CGRect window_frame;
   SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
-  if (!CGRectEqualToRect(window_frame, border->target_bounds)
+  if (CGPointEqualToPoint(window_frame.origin, border->target_bounds.origin)
+      && !CGRectEqualToRect(window_frame, border->target_bounds)
       && dt > (1ULL << 27)                                   ) {
-    border->last_coalesce_attempt = now;
+    border->last_coalesce_success = now;
     pthread_mutex_unlock(&border->mutex);
     usleep(timeout);
     pthread_mutex_lock(&border->mutex);

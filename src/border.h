@@ -65,6 +65,7 @@ struct border {
   CGContextRef context;
 
   bool disable_coalescing;
+  int64_t last_coalesce_success;
   int64_t last_coalesce_attempt;
 
   bool is_proxy;

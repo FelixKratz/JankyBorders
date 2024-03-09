@@ -45,18 +45,22 @@ static bool border_coalesce_resize_and_move_events(struct border* border, CGRect
   }
   int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
   int64_t dt = now - border->last_coalesce_attempt;
-  border->last_coalesce_attempt = now;
+  static const int timeout = 15000;
+  if (dt < timeout * 1000) {
+    return false;
+  }
 
   CGRect window_frame;
   SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
   if (!CGRectEqualToRect(window_frame, border->target_bounds)
       && dt > (1ULL << 27)                                   ) {
+    border->last_coalesce_attempt = now;
     pthread_mutex_unlock(&border->mutex);
-    usleep(15000);
+    usleep(timeout);
     pthread_mutex_lock(&border->mutex);
     if (border->external_proxy_wid) return false;
     SLSGetWindowBounds(border->cid, border->target_wid, frame);
-    return CGRectEqualToRect(window_frame, *frame);
+    return true;
   }
 
   *frame = window_frame;
@@ -309,26 +313,34 @@ void border_move(struct border* border) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
-  CGRect window_frame;
-  SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
+  pthread_mutex_unlock(&border->mutex);
 
   struct settings* settings = border_get_settings(border);
-  CGPoint origin = { .x = window_frame.origin.x
-                          - settings->border_width
-                          - BORDER_PADDING,
-                     .y = window_frame.origin.y
-                          - settings->border_width
-                          - BORDER_PADDING          };
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+    pthread_mutex_lock(&border->mutex);
+    CGRect window_frame;
+    if (!border_coalesce_resize_and_move_events(border, &window_frame)) {
+      pthread_mutex_unlock(&border->mutex);
+      return;
+    }
 
-  CFTypeRef transaction = SLSTransactionCreate(border->cid);
-  if (transaction) {
-    SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
-    SLSTransactionCommit(transaction, 1);
-    CFRelease(transaction);
-  }
-  border->target_bounds = window_frame;
-  border->origin = origin;
-  pthread_mutex_unlock(&border->mutex);
+    CGPoint origin = { .x = window_frame.origin.x
+                            - settings->border_width
+                            - BORDER_PADDING,
+                       .y = window_frame.origin.y
+                            - settings->border_width
+                            - BORDER_PADDING          };
+
+    CFTypeRef transaction = SLSTransactionCreate(border->cid);
+    if (transaction) {
+      SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
+    border->target_bounds = window_frame;
+    border->origin = origin;
+    pthread_mutex_unlock(&border->mutex);
+  });
 }
 
 void border_update(struct border* border, bool try_async) {

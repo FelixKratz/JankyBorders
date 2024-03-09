@@ -144,7 +144,7 @@ void windows_update_inactive(struct table* windows) {
 
 void windows_window_update(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
-  if (border) border_update(border, false);
+  if (border) border_update(border, true);
 }
 
 static bool windows_window_focus(struct table* windows, uint32_t wid) {

@@ -39,7 +39,7 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
 }
 
 static bool border_coalesce_resize_and_move_events(struct border* border, CGRect* frame) {
-  if (border->disable_coalescing || !border->wid) {
+  if (border->disable_coalescing || pthread_main_np() != 0 || !border->wid) {
     SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return true;
   }

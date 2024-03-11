@@ -40,27 +40,27 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
 }
 
 static bool border_coalesce_resize_and_move_events(struct border* border, CGRect* frame) {
-  if (border->disable_coalescing || pthread_main_np() != 0 || !border->wid) {
+  if (border->event_buffer.disable_coalescing || pthread_main_np() != 0 || !border->wid) {
     SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return true;
   }
   int64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW_APPROX);
-  int64_t dt = now - border->last_coalesce_attempt;
-  border->last_coalesce_attempt = now;
+  int64_t dt = now - border->event_buffer.last_coalesce_attempt;
+  border->event_buffer.last_coalesce_attempt = now;
 
   static const int timeout = 20000;
-  if (border->is_coalescing) return false;
+  if (border->event_buffer.is_coalescing) return false;
 
   CGRect window_frame;
   SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
   if (CGPointEqualToPoint(window_frame.origin, border->target_bounds.origin)
       && !CGRectEqualToRect(window_frame, border->target_bounds)
       && dt > (1ULL << 27)                                                  ) {
-    border->is_coalescing = true;
+    border->event_buffer.is_coalescing = true;
     pthread_mutex_unlock(&border->mutex);
     usleep(timeout);
     pthread_mutex_lock(&border->mutex);
-    border->is_coalescing = false;
+    border->event_buffer.is_coalescing = false;
     if (border->external_proxy_wid) return false;
     SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return true;

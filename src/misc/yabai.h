@@ -101,10 +101,10 @@ static void* yabai_proxy_end_proc(void* context) {
   struct yabai_proxy_payload* info = context;
   struct border* border = info->border;
   pthread_mutex_lock(&border->mutex);
-  border->disable_coalescing = true;
+  border->event_buffer.disable_coalescing = true;
   border->external_proxy_wid = 0;
   border_update_internal(border, &info->settings);
-  border->disable_coalescing = false;
+  border->event_buffer.disable_coalescing = false;
   pthread_mutex_unlock(&border->mutex);
   free(context);
   return NULL;

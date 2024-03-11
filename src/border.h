@@ -46,6 +46,12 @@ struct settings {
   struct table whitelist;
 };
 
+struct event_buffer {
+  bool disable_coalescing;
+  volatile bool is_coalescing;
+  int64_t last_coalesce_attempt;
+};
+
 struct border {
   pthread_mutex_t mutex;
   int cid;
@@ -66,10 +72,7 @@ struct border {
   CGContextRef context;
 
   struct animation animation;
-
-  bool disable_coalescing;
-  volatile bool is_coalescing;
-  int64_t last_coalesce_attempt;
+  struct event_buffer event_buffer;
 
   bool is_proxy;
   struct border* proxy;

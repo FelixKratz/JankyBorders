@@ -3,6 +3,7 @@
 #include "misc/helpers.h"
 #include "misc/window.h"
 #include "misc/drawing.h"
+#include "animation.h"
 #include "hashtable.h"
 
 #define BORDER_ORDER_ABOVE 1
@@ -63,6 +64,8 @@ struct border {
   CGRect target_bounds;
   CGRect drawing_bounds;
   CGContextRef context;
+
+  struct animation animation;
 
   bool disable_coalescing;
   volatile bool is_coalescing;

@@ -12,6 +12,7 @@ void border_init(struct border* border) {
   pthread_mutexattr_init(&mattr);
   pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&border->mutex, &mattr);
+  animation_init(&border->animation);
   border->cid = SLSMainConnectionID();
 }
 
@@ -245,10 +246,18 @@ void border_update_internal(struct border* border, struct settings* settings) {
     transaction = SLSTransactionCreate(cid);
     if(!transaction) return;
   }
-  CGAffineTransform transform = CGAffineTransformIdentity;
-  transform.tx = -border->origin.x;
-  transform.ty = -border->origin.y;
-  SLSTransactionSetWindowTransform(transaction, border->wid, 0, 0, transform);
+
+  if (!border->is_proxy) {
+    CGAffineTransform transform = CGAffineTransformIdentity;
+    transform.tx = -border->origin.x;
+    transform.ty = -border->origin.y;
+    SLSTransactionSetWindowTransform(transaction,
+                                     border->wid,
+                                     0,
+                                     0,
+                                     transform   );
+  }
+
   SLSTransactionSetWindowLevel(transaction, border->wid, level);
   SLSTransactionSetWindowSubLevel(transaction, border->wid, sub_level);
   SLSTransactionOrderWindow(transaction,
@@ -304,6 +313,7 @@ void border_destroy(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   border_destroy_window(border);
   if (border->proxy) border_destroy(border->proxy);
+  animation_stop(&border->animation);
   pthread_mutex_unlock(&border->mutex);
   free(border);
 }

@@ -12,7 +12,7 @@ void border_init(struct border* border) {
   pthread_mutexattr_init(&mattr);
   pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&border->mutex, &mattr);
-  SLSNewConnection(0, &border->cid);
+  border->cid = SLSMainConnectionID();
 }
 
 struct settings* border_get_settings(struct border* border) {
@@ -305,7 +305,6 @@ void border_destroy(struct border* border) {
   border_destroy_window(border);
   if (border->proxy) border_destroy(border->proxy);
   pthread_mutex_unlock(&border->mutex);
-  SLSReleaseConnection(border->cid);
   free(border);
 }
 

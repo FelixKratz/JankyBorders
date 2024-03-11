@@ -65,12 +65,12 @@ struct border {
   CGContextRef context;
 
   bool disable_coalescing;
-  int64_t last_coalesce_success;
+  volatile bool is_coalescing;
   int64_t last_coalesce_attempt;
 
   bool is_proxy;
   struct border* proxy;
-  uint32_t external_proxy_wid;
+  volatile uint32_t external_proxy_wid;
 
   struct settings setting_override;
 };

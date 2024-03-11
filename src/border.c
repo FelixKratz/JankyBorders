@@ -48,17 +48,18 @@ static bool border_coalesce_resize_and_move_events(struct border* border, CGRect
   border->last_coalesce_attempt = now;
 
   static const int timeout = 20000;
-  if (now - border->last_coalesce_success < timeout * 1000) return false;
+  if (border->is_coalescing) return false;
 
   CGRect window_frame;
   SLSGetWindowBounds(border->cid, border->target_wid, &window_frame);
   if (CGPointEqualToPoint(window_frame.origin, border->target_bounds.origin)
       && !CGRectEqualToRect(window_frame, border->target_bounds)
-      && dt > (1ULL << 27)                                   ) {
-    border->last_coalesce_success = now;
+      && dt > (1ULL << 27)                                                  ) {
+    border->is_coalescing = true;
     pthread_mutex_unlock(&border->mutex);
     usleep(timeout);
     pthread_mutex_lock(&border->mutex);
+    border->is_coalescing = false;
     if (border->external_proxy_wid) return false;
     SLSGetWindowBounds(border->cid, border->target_wid, frame);
     return true;

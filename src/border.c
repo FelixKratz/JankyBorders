@@ -6,16 +6,6 @@
 
 extern struct settings g_settings;
 
-void border_init(struct border* border) {
-  memset(border, 0, sizeof(struct border));
-  pthread_mutexattr_t mattr;
-  pthread_mutexattr_init(&mattr);
-  pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&border->mutex, &mattr);
-  animation_init(&border->animation);
-  border->cid = SLSMainConnectionID();
-}
-
 struct settings* border_get_settings(struct border* border) {
   assert(pthread_main_np() != 0);
   return border->setting_override.enabled
@@ -188,6 +178,21 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
   CGContextRestoreGState(border->context);
 }
 
+void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi) {
+  pthread_mutex_lock(&border->mutex);
+  int cid = border->cid;
+  border->wid = window_create(cid, frame, hidpi, unmanaged);
+
+  border->frame = frame;
+  border->needs_redraw = true;
+  border->context = SLWindowContextCreate(cid, border->wid, NULL);
+  CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
+
+  if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
+  window_send_to_space(cid, border->wid, border->sid);
+  pthread_mutex_unlock(&border->mutex);
+}
+
 void border_update_internal(struct border* border, struct settings* settings) {
   if (border->external_proxy_wid) return;
 
@@ -294,19 +299,23 @@ static void* border_update_async_proc(void* context) {
   return NULL;
 }
 
-void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi) {
-  pthread_mutex_lock(&border->mutex);
-  int cid = border->cid;
-  border->wid = window_create(cid, frame, hidpi, unmanaged);
+void border_init(struct border* border, int cid) {
+  memset(border, 0, sizeof(struct border));
+  pthread_mutexattr_t mattr;
+  pthread_mutexattr_init(&mattr);
+  pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&border->mutex, &mattr);
+  animation_init(&border->animation);
+  if (cid) border->cid = cid;
+  else border->cid = SLSMainConnectionID();
+}
 
-  border->frame = frame;
-  border->needs_redraw = true;
-  border->context = SLWindowContextCreate(cid, border->wid, NULL);
-  CGContextSetInterpolationQuality(border->context, kCGInterpolationNone);
-
-  if (!border->sid) border->sid = window_space_id(cid, border->target_wid);
-  window_send_to_space(cid, border->wid, border->sid);
-  pthread_mutex_unlock(&border->mutex);
+struct border* border_create() {
+  struct border* border = malloc(sizeof(struct border));
+  int cid = 0;
+  SLSNewConnection(0, &cid);
+  border_init(border, cid);
+  return border;
 }
 
 void border_destroy(struct border* border) {
@@ -314,6 +323,8 @@ void border_destroy(struct border* border) {
   border_destroy_window(border);
   if (border->proxy) border_destroy(border->proxy);
   animation_stop(&border->animation);
+  if (!border->is_proxy && border->cid != SLSMainConnectionID())
+    SLSReleaseConnection(border->cid);
   pthread_mutex_unlock(&border->mutex);
   free(border);
 }

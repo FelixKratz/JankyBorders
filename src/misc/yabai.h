@@ -1,12 +1,16 @@
 #pragma once
+#define _YABAI_INTEGRATION
+
+#ifdef _YABAI_INTEGRATION
 #include "extern.h"
 #include "../windows.h"
 #include "../mach.h"
 #include <CoreVideo/CoreVideo.h>
 #include <pthread.h>
 
-#define _YABAI_INTEGRATION
-
+// Additional border interfaces needed for the yabai integration
+void border_init(struct border* border, int cid);
+void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi);
 void border_update_internal(struct border* border, struct settings* settings);
 
 struct track_transform_payload {
@@ -119,7 +123,7 @@ static inline void yabai_proxy_begin(struct table* windows, uint32_t wid, uint32
     border->external_proxy_wid = wid;
     if (!border->proxy) {
       border->proxy = malloc(sizeof(struct border));
-      border_init(border->proxy);
+      border_init(border->proxy, border->cid);
       border_create_window(border->proxy, CGRectNull, true, false);
       border->proxy->target_bounds = border->target_bounds;
       border->proxy->frame = border->frame;
@@ -241,3 +245,4 @@ static inline void yabai_register_mach_port(struct table* windows) {
   CFRelease(source);
   CFRelease(cf_mach_port);
 }
+#endif

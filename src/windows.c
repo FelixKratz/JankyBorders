@@ -53,8 +53,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
         if (window_suitable(iterator)) {
           struct border* border = table_find(windows, &wid);
           if (!border) {
-            border = malloc(sizeof(struct border));
-            border_init(border);
+            border = border_create();
             table_add(windows, &wid, border);
             window_created = true;
           }

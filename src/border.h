@@ -81,9 +81,8 @@ struct border {
   struct settings setting_override;
 };
 
-void border_init(struct border* border);
+struct border* border_create();
 void border_destroy(struct border* border);
-void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi);
 
 void border_move(struct border* border);
 void border_update(struct border* border, bool try_async);

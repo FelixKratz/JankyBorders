@@ -3,6 +3,15 @@
 #include "sys/stat.h"
 #include "ApplicationServices/ApplicationServices.h"
 
+#define DELAY_ASYNC_EXEC_ON_MAIN_THREAD(delay, code) {\
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{\
+    usleep(delay);\
+    dispatch_async(dispatch_get_main_queue(), ^{\
+      code\
+    });\
+  });\
+}
+
 static inline void debug(const char* message, ...) {
 #ifdef DEBUG
   va_list va;

@@ -29,7 +29,6 @@ static inline uint32_t ax_get_front_window(int cid) {
   pid_t pid;
   SLSConnectionGetPID(target_cid, &pid);
 
-  usleep(20000);
   AXUIElementRef app = AXUIElementCreateApplication(pid);
   CFTypeRef window = NULL;
   AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute, &window);

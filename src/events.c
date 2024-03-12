@@ -59,16 +59,15 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   } else if (event == EVENT_WINDOW_REORDER) {
     debug("Window Reorder (and focus): %d\n", wid);
     windows_window_update(windows, wid);
-
-    // The update of the front window might not have taken place yet...
-    usleep(10000);
     windows_determine_and_focus_active_window(windows);
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
     debug("Window Focus\n");
-    windows_determine_and_focus_active_window(windows);
+    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
+      windows_determine_and_focus_active_window(windows);
+    })
   } else if (event == EVENT_WINDOW_UNHIDE) {
     debug("Window Unhide: %d\n", wid);
     windows_window_unhide(windows, wid);
@@ -80,13 +79,16 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 
 static void front_app_handler() {
   debug("Window Focus\n");
-  windows_determine_and_focus_active_window(&g_windows);
+  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
+    windows_determine_and_focus_active_window(&g_windows);
+  })
 }
 
 static void space_handler() {
   // Not all native-fullscreen windows have yet updated their space id...
-  usleep(20000);
-  windows_draw_borders_on_current_spaces(&g_windows);
+  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(20000, {
+    windows_draw_borders_on_current_spaces(&g_windows);
+  })
 }
 
 void events_register(int cid) {

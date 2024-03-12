@@ -430,6 +430,6 @@ void border_unhide(struct border* border) {
       SLSTransactionCommit(transaction, 1);
       CFRelease(transaction);
     }
-  } else border_update(border, false);
+  }
   pthread_mutex_unlock(&border->mutex);
 }

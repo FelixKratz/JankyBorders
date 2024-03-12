@@ -67,7 +67,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     debug("Window Focus\n");
     DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
       windows_determine_and_focus_active_window(windows);
-    })
+    });
   } else if (event == EVENT_WINDOW_UNHIDE) {
     debug("Window Unhide: %d\n", wid);
     windows_window_unhide(windows, wid);
@@ -81,14 +81,14 @@ static void front_app_handler() {
   debug("Window Focus\n");
   DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
     windows_determine_and_focus_active_window(&g_windows);
-  })
+  });
 }
 
 static void space_handler() {
   // Not all native-fullscreen windows have yet updated their space id...
   DELAY_ASYNC_EXEC_ON_MAIN_THREAD(20000, {
     windows_draw_borders_on_current_spaces(&g_windows);
-  })
+  });
 }
 
 void events_register(int cid) {

@@ -59,7 +59,9 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   } else if (event == EVENT_WINDOW_REORDER) {
     debug("Window Reorder (and focus): %d\n", wid);
     windows_window_update(windows, wid);
-    windows_determine_and_focus_active_window(windows);
+    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(10000, {
+      windows_determine_and_focus_active_window(windows);
+    });
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
     windows_window_update(windows, wid);

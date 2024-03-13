@@ -182,26 +182,27 @@ static inline void yabai_proxy_end(struct table* windows, uint32_t wid, uint32_t
 static void yabai_message(CFMachPortRef port, void* data, CFIndex size, void* context) {
   if (size == sizeof(struct mach_message)) {
     struct mach_message* message = data;
-    static struct payload {
+
+    struct payload {
       uint32_t event;
       uint32_t count;
       uint32_t proxy_wid[512];
       uint32_t real_wid[512];
-    } payload;
+    };
 
     if (message->descriptor.size == sizeof(struct payload)) {
-      payload = *(struct payload*)message->descriptor.address;
-      if (payload.event == 1325) {
-        for (int i = 0; i < payload.count; i++) {
+      struct payload* payload = message->descriptor.address;
+      if (payload->event == 1325) {
+        for (int i = 0; i < payload->count; i++) {
           yabai_proxy_begin(context,
-                            payload.proxy_wid[i],
-                            payload.real_wid[i]  );
+                            payload->proxy_wid[i],
+                            payload->real_wid[i]  );
         }
-      } else if (payload.event == 1326) {
-        for (int i = 0; i < payload.count; i++) {
+      } else if (payload->event == 1326) {
+        for (int i = 0; i < payload->count; i++) {
           yabai_proxy_end(context,
-                          payload.proxy_wid[i],
-                          payload.real_wid[i]  );
+                          payload->proxy_wid[i],
+                          payload->real_wid[i]  );
         }
       }
     }

@@ -66,6 +66,9 @@ static inline void execute_config_file(const char* name, const char* filename) {
     return;
   }
 
+  signal(SIGCHLD, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
+
   int pid = fork();
   if (pid !=  0) return;
 

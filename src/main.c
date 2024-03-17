@@ -66,10 +66,23 @@ static TABLE_COMPARE_FUNC(cmp_blacklist) {
 static void message_handler(void* data, uint32_t len) {
   char* message = data;
   uint32_t update_mask = 0;
+  struct settings settings = g_settings;
+
   while(message && *message) {
-    update_mask |= parse_settings(&g_settings, 1, &message);
+    update_mask |= parse_settings(&settings, 1, &message);
     message += strlen(message) + 1;
   }
+
+  if (settings.apply_to > 0) {
+    struct border* border = table_find(&g_windows, &settings.apply_to);
+    if (border) {
+      border->setting_override = settings;
+      border->setting_override.enabled = true;
+      border->needs_redraw = true;
+      border_update(border, true);
+    }
+    return;
+  } else g_settings = settings;
 
   if (update_mask & BORDER_UPDATE_MASK_RECREATE_ALL) {
     windows_recreate_all_borders(&g_windows);

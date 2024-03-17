@@ -26,6 +26,7 @@ struct color_style {
 
 struct settings {
   bool enabled;
+  uint32_t apply_to;
 
   struct color_style active_window;
   struct color_style inactive_window;

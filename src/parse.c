@@ -120,6 +120,9 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
     } else if (strcmp(arguments[i], "ax_focus=off") == 0) {
       settings->ax_focus = false;
       update_mask |= BORDER_UPDATE_MASK_SETTING;
+    } else if (sscanf(arguments[i], "apply-to=%d", &settings->apply_to) == 1) {
+
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
     } else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
     }

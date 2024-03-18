@@ -287,7 +287,6 @@ void border_update_internal(struct border* border, struct settings* settings) {
 
   SLSSetWindowTags(cid, border->wid, &set_tags, 0x40);
   SLSClearWindowTags(cid, border->wid, &clear_tags, 0x40);
-  SLSSetWindowBackgroundBlurRadius(cid, border->wid, settings->blur_radius);
 
   if (disabled_update) SLSReenableUpdate(cid);
 }

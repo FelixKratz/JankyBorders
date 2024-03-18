@@ -30,9 +30,6 @@ API, thereby being faster than comparable tools.
 *background_color=<color>*
 	Sets the background fill color for all windows (only _0xAARRGGBB_ arguments supported).
 
-*blur_radius=<float>*
-	Sets the blur radius applied to the borders or backgrounds with transparency.
-
 *width=<float>*
 	Determines the width of the border. For example, width=5.0 creates a border
 	5.0 points wide.

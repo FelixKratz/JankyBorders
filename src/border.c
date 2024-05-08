@@ -228,10 +228,11 @@ void border_update_internal(struct border* border, struct settings* settings) {
                          settings->hidpi  );
   }
 
-  CFTypeRef transaction = SLSTransactionCreate(cid);
-  if (!transaction) return;
-
+  bool disabled_update = false;
   if (!CGRectEqualToRect(frame, border->frame)) {
+    CFTypeRef transaction = SLSTransactionCreate(cid);
+    if (!transaction) return;
+
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
     SLSTransactionSetWindowShape(transaction,
@@ -243,20 +244,17 @@ void border_update_internal(struct border* border, struct settings* settings) {
 
     border->needs_redraw = true;
     border->frame = frame;
-  }
-
-  SLSTransactionMoveWindowWithGroup(transaction, border->wid, border->origin);
-
-  bool disabled_update = border->needs_redraw;
-  if (border->needs_redraw) {
+    disabled_update = true;
     SLSDisableUpdate(cid);
     SLSTransactionCommit(transaction, 1);
     CFRelease(transaction);
-
-    border_draw(border, frame, settings);
-    transaction = SLSTransactionCreate(cid);
-    if(!transaction) return;
   }
+
+  if (border->needs_redraw) border_draw(border, frame, settings);
+
+  CFTypeRef transaction = SLSTransactionCreate(cid);
+  if(!transaction) return;
+  SLSTransactionMoveWindowWithGroup(transaction, border->wid, border->origin);
 
   if (!border->is_proxy) {
     CGAffineTransform transform = CGAffineTransformIdentity;
@@ -277,6 +275,7 @@ void border_update_internal(struct border* border, struct settings* settings) {
                             border->target_wid      );
   SLSTransactionCommit(transaction, 1);
   CFRelease(transaction);
+
   uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
   uint64_t clear_tags = 0;
 

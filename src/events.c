@@ -26,12 +26,20 @@ struct window_spawn_data {
   uint32_t wid;
 };
 
+static bool is_own_window(int cid, uint32_t wid) {
+  int wid_cid = 0;
+  SLSGetWindowOwner(cid, wid, &wid_cid);
+  pid_t pid = 0;
+  SLSConnectionGetPID(wid_cid, &pid);
+  return pid == g_pid;
+}
+
 static void window_spawn_handler(uint32_t event, struct window_spawn_data* data, size_t _, int cid) {
   struct table* windows = &g_windows;
   uint32_t wid = data->wid;
   uint64_t sid = data->sid;
 
-  if (!wid || !sid) return;
+  if (!wid || !sid || is_own_window(cid, wid)) return;
 
   if (event == EVENT_WINDOW_CREATE) {
     if (windows_window_create(windows, wid, sid)) {
@@ -49,6 +57,8 @@ static void window_spawn_handler(uint32_t event, struct window_spawn_data* data,
 static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _, int cid) {
   uint32_t wid = *window_id;
   struct table* windows = &g_windows;
+
+  if (is_own_window(cid, wid)) return;
 
   if (event == EVENT_WINDOW_MOVE) {
     debug("Window Move: %d\n", wid);

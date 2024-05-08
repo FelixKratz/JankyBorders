@@ -14,8 +14,8 @@ struct settings* border_get_settings(struct border* border) {
 }
 
 static void border_destroy_window(struct border* border) {
-  if (border->wid) SLSReleaseWindow(border->cid, border->wid);
   if (border->context) CGContextRelease(border->context);
+  if (border->wid) SLSReleaseWindow(border->cid, border->wid);
   border->wid = 0;
   border->context = NULL;
 }

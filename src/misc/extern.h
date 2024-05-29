@@ -78,3 +78,5 @@ extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
 extern CFStringRef SLSCopyManagedDisplayForWindow(int cid, uint32_t wid);
 extern uint64_t SLSManagedDisplayGetCurrentSpace(int cid, CFStringRef uuid);
 extern CFStringRef SLSCopyActiveMenuBarDisplayIdentifier(int cid);
+
+extern CGError SLSFlushWindowContentRegion(int cid, uint32_t wid, void* dirty);

@@ -182,6 +182,7 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
   CFRelease(inner_clip_path);
   CGContextFlush(border->context);
   CGContextRestoreGState(border->context);
+  SLSFlushWindowContentRegion(border->cid, border->wid, NULL);
 }
 
 void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi) {

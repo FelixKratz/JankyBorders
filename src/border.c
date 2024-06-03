@@ -236,6 +236,11 @@ void border_update_internal(struct border* border, struct settings* settings) {
 
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
+    SLSTransactionOrderWindow(transaction,
+                              border->wid,
+                              0,
+                              border->target_wid);
+
     SLSTransactionSetWindowShape(transaction,
                                  border->wid,
                                  -9999,

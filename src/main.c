@@ -82,7 +82,35 @@ static void message_handler(void* data, uint32_t len) {
       border_update(border, true);
     }
     return;
-  } else g_settings = settings;
+  } else {
+    g_settings = settings;
+    for (int i = 0; i < g_windows.capacity; ++i) {
+      struct bucket* bucket = g_windows.buckets[i];
+      while (bucket) {
+        if (bucket->value) {
+          struct border* border = bucket->value;
+          if (border->setting_override.enabled) {
+            char* message = data;
+            uint32_t window_update_mask = 0;
+            while(message && *message) {
+              window_update_mask |= parse_settings(&border->setting_override,
+                                                   1,
+                                                   &message                  );
+              message += strlen(message) + 1;
+            }
+
+            if (window_update_mask
+                && !((update_mask & BORDER_UPDATE_MASK_ALL)
+                     || (update_mask & BORDER_UPDATE_MASK_RECREATE_ALL))) {
+              border->needs_redraw = true;
+              border_update(border, true);
+            }
+          }
+        }
+        bucket = bucket->next;
+      }
+    }
+  }
 
   if (update_mask & BORDER_UPDATE_MASK_RECREATE_ALL) {
     windows_recreate_all_borders(&g_windows);

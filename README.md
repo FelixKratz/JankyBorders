@@ -25,7 +25,17 @@ For example, if you are using `yabai`, you could add:
 borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0 &
 ```
 to the very end of your `yabairc`. This will start the borders with the
-specified options.
+specified options along with yabai.
+
+### Bootstrap with AeroSpace
+You could add:
+```toml
+after-startup-command = [
+  'exec-and-forget borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0'
+]
+```
+to you `aerospace.toml`. This will start borders with the specified options
+along with AeroSpace.
 
 ### Bootstrap with brew
 If you want to run this as a separate service, you could use:

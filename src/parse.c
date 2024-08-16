@@ -36,23 +36,25 @@ static bool parse_color(struct color_style* style, char* token) {
   else if (sscanf(token, "=glow(0x%x)", &style->color) == 1) {
     style->stype = COLOR_STYLE_GLOW;
     return true;
-  } else if (sscanf(token,
+  }
+  else if (sscanf(token,
              "=gradient(top_left=0x%x,bottom_right=0x%x)",
              &style->gradient.color1,
              &style->gradient.color2) == 2) {
     style->stype = COLOR_STYLE_GRADIENT;
     style->gradient.direction = TL_TO_BR;
     return true;
-  } else if (sscanf(token,
+  }
+  else if (sscanf(token,
              "=gradient(top_right=0x%x,bottom_left=0x%x)",
              &style->gradient.color1,
              &style->gradient.color2) == 2) {
     style->stype = COLOR_STYLE_GRADIENT;
     style->gradient.direction = TR_TO_BL;
     return true;
-  } else {
-    printf("[?] Borders: Invalid color argument color%s\n", token);
   }
+  else printf("[?] Borders: Invalid color argument color%s\n", token);
+
   return false;
 }
 
@@ -71,12 +73,14 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
                                  arguments[i] + strlen(active_color))) {
         update_mask |= BORDER_UPDATE_MASK_ACTIVE;
       }
-    } else  if (str_starts_with(arguments[i], inactive_color)) {
+    }
+    else  if (str_starts_with(arguments[i], inactive_color)) {
       if (parse_color(&settings->inactive_window,
                                  arguments[i] + strlen(inactive_color))) {
         update_mask |= BORDER_UPDATE_MASK_INACTIVE;
       }
-    } else  if (str_starts_with(arguments[i], background_color)) {
+    }
+    else if (str_starts_with(arguments[i], background_color)) {
       if (parse_color(&settings->background,
                                  arguments[i] + strlen(background_color))) {
         update_mask |= BORDER_UPDATE_MASK_ALL;
@@ -105,22 +109,27 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
     }
     else if (sscanf(arguments[i], "style=%c", &settings->border_style) == 1) {
       update_mask |= BORDER_UPDATE_MASK_ALL;
-    } else if (strcmp(arguments[i], "hidpi=on") == 0) {
+    }
+    else if (strcmp(arguments[i], "hidpi=on") == 0) {
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = true;
-    } else if (strcmp(arguments[i], "hidpi=off") == 0) {
+    }
+    else if (strcmp(arguments[i], "hidpi=off") == 0) {
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = false;
-    } else if (strcmp(arguments[i], "ax_focus=on") == 0) {
+    }
+    else if (strcmp(arguments[i], "ax_focus=on") == 0) {
       settings->ax_focus = true;
       update_mask |= BORDER_UPDATE_MASK_SETTING;
-    } else if (strcmp(arguments[i], "ax_focus=off") == 0) {
+    }
+    else if (strcmp(arguments[i], "ax_focus=off") == 0) {
       settings->ax_focus = false;
       update_mask |= BORDER_UPDATE_MASK_SETTING;
-    } else if (sscanf(arguments[i], "apply-to=%d", &settings->apply_to) == 1) {
-
+    }
+    else if (sscanf(arguments[i], "apply-to=%d", &settings->apply_to) == 1) {
       update_mask |= BORDER_UPDATE_MASK_SETTING;
-    } else {
+    }
+    else {
       printf("[?] Borders: Invalid argument '%s'\n", arguments[i]);
     }
   }

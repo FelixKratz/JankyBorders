@@ -4,6 +4,9 @@ void animation_init(struct animation* animation) {
   memset(animation, 0, sizeof(struct animation));
 }
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 void animation_start(struct animation* animation, void* proc, void* context) {
   assert(animation->link == NULL);
   assert(animation->context == NULL);
@@ -27,3 +30,4 @@ void animation_stop(struct animation* animation) {
   if (animation->context) free(animation->context);
   animation->context = NULL;
 }
+#pragma clang diagnostic pop

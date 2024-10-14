@@ -191,7 +191,7 @@ void windows_window_unhide(struct table* windows, uint32_t wid) {
 
 bool windows_window_destroy(struct table* windows, uint32_t wid, uint32_t sid) {
   struct border* border = table_find(windows, &wid);
-  if (border && (border->sid == sid || border->sticky)) {
+  if (border && (border->sid == sid || border->sticky || sid == 0)) {
     table_remove(windows, &wid);
     border_destroy(border);
     windows_update_notifications(windows);

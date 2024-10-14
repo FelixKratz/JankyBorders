@@ -1,4 +1,5 @@
 #include "events.h"
+#include "misc/extern.h"
 #include "windows.h"
 #include "border.h"
 #include "misc/window.h"
@@ -86,6 +87,9 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   } else if (event == EVENT_WINDOW_HIDE) {
     debug("Window Hide: %d\n", wid);
     windows_window_hide(windows, wid);
+  } else if (event == EVENT_WINDOW_CLOSE) {
+    debug("Window Close: %d\n", wid);
+    windows_window_destroy(windows, wid, 0);
   }
 }
 
@@ -106,6 +110,7 @@ static void space_handler() {
 void events_register(int cid) {
   void* cid_ctx = (void*)(intptr_t)cid;
 
+  SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_CLOSE, cid_ctx);
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_MOVE, cid_ctx);
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_RESIZE, cid_ctx);
   SLSRegisterNotifyProc(window_modify_handler, EVENT_WINDOW_LEVEL, cid_ctx);

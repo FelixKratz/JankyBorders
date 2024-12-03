@@ -252,7 +252,7 @@ void border_update_internal(struct border* border, struct settings* settings) {
     border->frame = frame;
     disabled_update = true;
     SLSDisableUpdate(cid);
-    SLSTransactionCommit(transaction, 1);
+    SLSTransactionCommit(transaction, 0);
     CFRelease(transaction);
   }
 
@@ -279,7 +279,7 @@ void border_update_internal(struct border* border, struct settings* settings) {
                             border->wid,
                             settings->border_order,
                             border->target_wid      );
-  SLSTransactionCommit(transaction, 1);
+  SLSTransactionCommit(transaction, 0);
   CFRelease(transaction);
 
   uint64_t set_tags = (1ULL << 1) | (1ULL << 9);
@@ -366,7 +366,7 @@ void border_move(struct border* border) {
     CFTypeRef transaction = SLSTransactionCreate(border->cid);
     if (transaction) {
       SLSTransactionMoveWindowWithGroup(transaction, border->wid, origin);
-      SLSTransactionCommit(transaction, 1);
+      SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);
     }
     border->target_bounds = window_frame;
@@ -407,7 +407,7 @@ void border_hide(struct border* border) {
                                 border->wid,
                                 0,
                                 border->target_wid);
-      SLSTransactionCommit(transaction, 1);
+      SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);
     }
   }
@@ -431,7 +431,7 @@ void border_unhide(struct border* border) {
                                 border->wid,
                                 settings->border_order,
                                 border->target_wid      );
-      SLSTransactionCommit(transaction, 1);
+      SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);
     }
   }

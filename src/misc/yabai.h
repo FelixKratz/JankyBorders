@@ -48,7 +48,7 @@ static CVReturn track_transform(CVDisplayLinkRef display_link, const CVTimeStamp
   if (transaction) {
     SLSTransactionSetWindowTransform(transaction, payload->proxy_wid, 0, 0, border_transform);
     SLSTransactionSetWindowTransform(transaction, payload->border_wid, 0, 0, border_transform);
-    SLSTransactionCommit(transaction, 1);
+    SLSTransactionCommit(transaction, 0);
     CFRelease(transaction);
   }
   return kCVReturnSuccess;
@@ -92,7 +92,7 @@ static void* yabai_proxy_begin_proc(void* context) {
     if (transaction) {
       SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
       SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
-      SLSTransactionCommit(transaction, 1);
+      SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);
     }
   }
@@ -159,7 +159,7 @@ static inline void yabai_proxy_end(struct table* windows, uint32_t wid, uint32_t
     if (transaction) {
       SLSTransactionSetWindowAlpha(transaction, proxy->wid, 0.f);
       SLSTransactionSetWindowAlpha(transaction, border->wid, 1.f);
-      SLSTransactionCommit(transaction, 1);
+      SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);
     }
 

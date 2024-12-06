@@ -329,14 +329,17 @@ struct border* border_create() {
 }
 
 void border_destroy(struct border* border) {
-  pthread_mutex_lock(&border->mutex);
-  border_destroy_window(border);
-  if (border->proxy) border_destroy(border->proxy);
-  animation_stop(&border->animation);
-  if (!border->is_proxy && border->cid != SLSMainConnectionID())
-    SLSReleaseConnection(border->cid);
-  pthread_mutex_unlock(&border->mutex);
-  free(border);
+  border_hide(border);
+  dispatch_async(dispatch_get_main_queue(), ^{
+    pthread_mutex_lock(&border->mutex);
+    border_destroy_window(border);
+    if (border->proxy) border_destroy(border->proxy);
+    animation_stop(&border->animation);
+    if (!border->is_proxy && border->cid != SLSMainConnectionID())
+      SLSReleaseConnection(border->cid);
+    pthread_mutex_unlock(&border->mutex);
+    free(border);
+  });
 }
 
 void border_move(struct border* border) {

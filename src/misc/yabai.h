@@ -87,15 +87,21 @@ static void* yabai_proxy_begin_proc(void* context) {
     proxy->is_proxy = true;
     proxy->frame = CGRectNull;
     border_update_internal(proxy, &info->settings);
-
-    CFTypeRef transaction = SLSTransactionCreate(proxy->cid);
-    if (transaction) {
-      SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
-      SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
-      SLSTransactionCommit(transaction, 0);
-      CFRelease(transaction);
-    }
   }
+
+  CFTypeRef transaction = SLSTransactionCreate(proxy->cid);
+  if (transaction) {
+    SLSTransactionOrderWindow(transaction,
+                              proxy->wid,
+                              info->settings.border_order,
+                              info->external_proxy_wid    );
+
+    SLSTransactionSetWindowAlpha(transaction, info->border_wid, 0.f);
+    SLSTransactionSetWindowAlpha(transaction, proxy->wid, 1.f);
+    SLSTransactionCommit(transaction, 0);
+    CFRelease(transaction);
+  }
+
   pthread_mutex_unlock(&proxy->mutex);
   free(context);
   return NULL;

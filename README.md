@@ -34,7 +34,7 @@ after-startup-command = [
   'exec-and-forget borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0'
 ]
 ```
-to you `aerospace.toml`. This will start borders with the specified options
+to your `aerospace.toml`. This will start borders with the specified options
 along with AeroSpace.
 
 ### Bootstrap with brew

@@ -10,6 +10,7 @@
 #define BORDER_ORDER_BELOW -1
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_SQUARE 's'
+#define BORDER_STYLE_NONE 'n'
 #define BORDER_PADDING 8.0
 #define BORDER_TSMN 3.27f
 #define BORDER_TSMW 8.f

@@ -1,76 +1,101 @@
 #include "extern.h"
-#include <mach/mach.h>
+#include <mach-o/dyld.h>
+#include <mach-o/swap.h>
+
+static struct mach_header_64 *macho_find_image_header(char *target_name,
+                                                      uint64_t *slide) {
+  int image_count = _dyld_image_count();
+
+  for (int i = 0; i < image_count; ++i) {
+    const char *image_name = _dyld_get_image_name(i);
+    if (!image_name)
+      continue;
+
+    if (strcmp(image_name, target_name) == 0) {
+      *slide = _dyld_get_image_vmaddr_slide(i);
+      return (struct mach_header_64 *)_dyld_get_image_header(i);
+    }
+  }
+
+  return NULL;
+}
+
+static struct segment_command_64 *
+macho_find_linkedit_segment(struct mach_header_64 *header) {
+  uint64_t offset = sizeof(struct mach_header_64);
+
+  for (int i = 0; i < (int)header->ncmds; ++i) {
+    struct load_command *cmd =
+        (struct load_command *)(((uint8_t *)header) + offset);
+
+    if (cmd->cmd == LC_SEGMENT_64) {
+      struct segment_command_64 *segment = (struct segment_command_64 *)cmd;
+      if (strcmp(segment->segname, SEG_LINKEDIT) == 0) {
+        return segment;
+      }
+    }
+
+    offset += cmd->cmdsize;
+  }
+
+  return NULL;
+}
+
+static struct symtab_command *
+macho_find_symtab_command(struct mach_header_64 *header) {
+  uint64_t offset = sizeof(struct mach_header_64);
+
+  for (int i = 0; i < (int)header->ncmds; ++i) {
+    struct load_command *cmd =
+        (struct load_command *)(((uint8_t *)header) + offset);
+
+    if (cmd->cmd == LC_SYMTAB) {
+      return (struct symtab_command *)cmd;
+    }
+
+    offset += cmd->cmdsize;
+  }
+
+  return NULL;
+}
+
+void *macho_find_symbol(char *target_image, char *target_symbol) {
+  uint64_t slide = 0;
+  struct mach_header_64 *header = macho_find_image_header(target_image, &slide);
+  if (!header)
+    return NULL;
+
+  struct segment_command_64 *linkedit_segment =
+      macho_find_linkedit_segment(header);
+  if (!linkedit_segment)
+    return NULL;
+
+  struct symtab_command *symtab_command = macho_find_symtab_command(header);
+  if (!symtab_command)
+    return NULL;
+
+  int symbol_count = symtab_command->nsyms;
+  void *symbol_str =
+      (void *)(linkedit_segment->vmaddr - linkedit_segment->fileoff) +
+      symtab_command->stroff + slide;
+  void *symbol_sym =
+      (void *)(linkedit_segment->vmaddr - linkedit_segment->fileoff) +
+      symtab_command->symoff + slide;
+
+  for (int i = 0; i < symbol_count; ++i) {
+    struct nlist_64 *list = (void *)symbol_sym + (i * sizeof(struct nlist_64));
+    char *symbol_name = (char *)symbol_str + list->n_un.n_strx;
+    if (strcmp(symbol_name, target_symbol) == 0) {
+      return (void *)(list->n_value + slide);
+    }
+  }
+
+  return NULL;
+}
+
+static mach_port_t (* CGSGetConnectionPortById)(int);
 
 mach_port_t create_connection_server_port() {
-  #pragma pack(push,2)
-  struct {
-    mach_msg_header_t header;
-
-    int32_t magic1;
-    mach_port_t server_port;
-    int32_t padding;
-
-    int32_t magic2;
-    int64_t padding2;
-
-    int64_t magic3;
-    int32_t padding3;
-    int32_t cid;
-
-    int32_t bundle_size;
-    char bundle_name[0x8];
-    int32_t connection_count;
-    int32_t launched_before_login;
-    int32_t is_ui_process;
-    int32_t context_id;
-  } msg = { 0 };
-  #pragma pack(pop)
-
-  msg.header.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND,
-                                            MACH_MSG_TYPE_MAKE_SEND_ONCE,
-                                            0,
-                                            MACH_MSGH_BITS_REMOTE_MASK
-                                            | MACH_MSGH_BITS_COMPLEX     );
-
-  msg.header.msgh_local_port = mig_get_special_reply_port(); 
-  msg.header.msgh_remote_port = SLSServerPort(0);
-  msg.header.msgh_size = sizeof(msg);
-  msg.header.msgh_id = 0x7468;
-
-  msg.magic1 = 2;
-  msg.magic2 = 0x110000;
-  msg.magic3 = 0x110000;
-
-  snprintf(msg.bundle_name, sizeof(msg.bundle_name), "borders");
-  msg.bundle_size = sizeof(msg.bundle_name);
-
-  kern_return_t error = mach_msg(&msg.header,
-                                 MACH_SEND_MSG
-                                 | MACH_SEND_SYNC_OVERRIDE
-                                 | MACH_SEND_PROPAGATE_QOS
-                                 | MACH_RCV_MSG
-                                 | MACH_RCV_SYNC_WAIT,
-                                 sizeof(msg),
-                                 0x48,
-                                 msg.header.msgh_local_port,
-                                 0,
-                                 0                          );
-
-  if (error != KERN_SUCCESS) {
-    printf("Connection: Error receiving message\n");
-    mig_dealloc_special_reply_port(msg.header.msgh_local_port);
-    return 0;
-  }
-
-  if (msg.header.msgh_id != 0x74cc
-      || msg.header.msgh_size != 0x40
-      || msg.magic1 != 2
-      || !(msg.magic2 & 0x110000)
-      || !(msg.magic3 & 0x110000)) {
-    printf("Connection: Wrong message received.\n");
-    mach_msg_destroy(&msg.header);
-    return 0;
-  }
-
-  return msg.server_port;
+  CGSGetConnectionPortById = macho_find_symbol("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", "_CGSGetConnectionPortById");
+  return CGSGetConnectionPortById(SLSMainConnectionID());
 }

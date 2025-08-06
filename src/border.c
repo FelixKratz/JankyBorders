@@ -233,25 +233,21 @@ void border_update_internal(struct border* border, struct settings* settings) {
   if (!CGRectEqualToRect(frame, border->frame)) {
     CFTypeRef transaction = SLSTransactionCreate(cid);
     if (!transaction) return;
+    disabled_update = true;
+    SLSDisableUpdate(cid);
 
     CFTypeRef frame_region;
     CGSNewRegionWithRect(&frame, &frame_region);
-    SLSTransactionOrderWindow(transaction,
-                              border->wid,
-                              0,
-                              border->target_wid);
-
-    SLSTransactionSetWindowShape(transaction,
-                                 border->wid,
-                                 -9999,
-                                 -9999,
-                                 frame_region);
+    SLSSetWindowShape(border->cid, border->wid, -9999, -9999, frame_region);
     CFRelease(frame_region);
 
     border->needs_redraw = true;
     border->frame = frame;
-    disabled_update = true;
-    SLSDisableUpdate(cid);
+
+    SLSTransactionOrderWindow(transaction,
+                              border->wid,
+                              0,
+                              border->target_wid);
     SLSTransactionCommit(transaction, 0);
     CFRelease(transaction);
   }

@@ -22,8 +22,8 @@ static void border_destroy_window(struct border* border) {
 
 static bool border_check_too_small(struct border* border, CGRect window_frame) {
   CGRect smallest_rect = CGRectInset(window_frame, 1.0, 1.0);
-  if (smallest_rect.size.width < 2.f * BORDER_INNER_RADIUS
-      || smallest_rect.size.height < 2.f * BORDER_INNER_RADIUS) {
+  if (smallest_rect.size.width < 2.f * border->inner_radius
+      || smallest_rect.size.height < 2.f * border->inner_radius) {
     return true;
   }
   return false;
@@ -133,8 +133,8 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
     CGPathAddRoundedRect(inner_clip_path,
                          NULL,
                          CGRectInset(path_rect, 1.0, 1.0),
-                         BORDER_INNER_RADIUS,
-                         BORDER_INNER_RADIUS              );
+                         border->inner_radius,
+                         border->inner_radius             );
   }
   drawing_clip_between_rect_and_path(border->context, frame, inner_clip_path);
 
@@ -157,13 +157,13 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
        || color_style.stype == COLOR_STYLE_GLOW) {
       drawing_draw_rounded_rect_with_inset(border->context,
                                            path_rect,
-                                           BORDER_RADIUS   );
+                                           border->radius  );
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
       drawing_draw_rounded_gradient_with_inset(border->context,
                                                gradient,
                                                gradient_dir,
                                                path_rect,
-                                               BORDER_RADIUS   );
+                                               border->radius  );
     }
   }
   CGGradientRelease(gradient);

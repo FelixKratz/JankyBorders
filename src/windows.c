@@ -58,6 +58,22 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
             window_created = true;
           }
 
+          int32_t radius = 9;
+
+          // Determine window corner radius in macOS 26+
+          #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
+            if (__builtin_available(macOS 26.0, *)) {
+              CFArrayRef radii_ref = SLSWindowIteratorGetCornerRadii(iterator);
+              if (radii_ref && CFArrayGetCount(radii_ref) > 0) {
+                CFNumberRef value = CFArrayGetValueAtIndex(radii_ref, 0);
+                CFNumberGetValue(value, kCFNumberSInt32Type, &radius);
+              }
+              if (radii_ref) CFRelease(radii_ref);
+            }
+          #endif
+
+          border->radius = radius;
+          border->inner_radius = radius + 1;
           border->target_wid = wid;
           border->sid = sid;
           border_update(border, false);

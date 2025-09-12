@@ -136,6 +136,8 @@ static inline void yabai_proxy_begin(struct table* windows, uint32_t wid, uint32
       border->proxy->focused = border->focused;
       border->proxy->target_wid = border->target_wid;
       border->proxy->sid = border->sid;
+      border->proxy->radius = border->radius;
+      border->proxy->inner_radius = border->inner_radius;
     }
 
     struct yabai_proxy_payload* payload

@@ -73,6 +73,10 @@ extern uint64_t SLSWindowIteratorGetTags(CFTypeRef iterator);
 extern uint64_t SLSWindowIteratorGetAttributes(CFTypeRef iterator);
 extern int SLSWindowIteratorGetLevel(CFTypeRef iterator);
 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
+extern CFArrayRef SLSWindowIteratorGetCornerRadii(CFTypeRef iterator);
+#endif
+
 extern CFArrayRef SLSCopyManagedDisplays(int cid);
 extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
 extern CFStringRef SLSCopyManagedDisplayForWindow(int cid, uint32_t wid);

@@ -178,10 +178,7 @@ static inline int32_t window_sub_level(uint32_t wid) {
     return 0;
   }
 
-  if (msg.info.header.msgh_id != 0x7427
-     || msg.info.header.msgh_size != 0x28
-     || msg.info.header.msgh_remote_port != 0
-     || msg.payload.wid != 0                 ) {
+  if (msg.info.header.msgh_id != 0x7427) {
     printf("SubLevel: Invalid message received\n");
     mach_msg_destroy(&msg.info.header);
     return 0;

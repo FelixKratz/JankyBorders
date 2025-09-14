@@ -58,7 +58,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
             window_created = true;
           }
 
-          int32_t radius = 9;
+          int32_t radius = 0;
 
           // Determine window corner radius in macOS 26+
           #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
@@ -71,6 +71,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
               if (radii_ref) CFRelease(radii_ref);
             }
           #endif
+          radius = radius > 0 ? radius : 9;
 
           border->radius = radius;
           border->inner_radius = radius + 1;

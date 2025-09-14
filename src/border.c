@@ -220,7 +220,7 @@ void border_update_internal(struct border* border, struct settings* settings) {
   } 
 
   int level = window_level(cid, border->target_wid);
-  int sub_level = window_sub_level(border->target_wid);
+  int sub_level = window_sub_level(cid, border->target_wid);
 
   if (!border->wid) {
     border_create_window(border,

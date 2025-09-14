@@ -130,7 +130,11 @@ static inline uint64_t window_space_id(int cid, uint32_t wid) {
 }
 
 extern mach_port_t g_server_port;
-static inline int32_t window_sub_level(uint32_t wid) {
+static inline int32_t window_sub_level(int cid, uint32_t wid) {
+  if (__builtin_available(macOS 26.0, *)) {
+    return SLSGetWindowSubLevel(cid, wid);
+  }
+
   #pragma pack(push,2)
   struct {
     struct {

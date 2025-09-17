@@ -17,7 +17,7 @@
 #define HELP_OPT_SHRT "-h"
 
 #define MAJOR 1
-#define MINOR 7
+#define MINOR 8
 #define PATCH 0
 
 pid_t g_pid;

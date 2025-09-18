@@ -134,7 +134,7 @@ static inline int32_t window_sub_level(int cid, uint32_t wid) {
   mach_msg_id_t request = 0x73c3;
   if (__builtin_available(macOS 26.0, *)) request = 0x76e3;
 
-  mach_msg_id_t response = 7427;
+  mach_msg_id_t response = 0x7427;
   if (__builtin_available(macOS 26.0, *)) response = 0x7747;
 
   #pragma pack(push,2)

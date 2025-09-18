@@ -268,7 +268,6 @@ void border_update_internal(struct border* border, struct settings* settings) {
                                      0,
                                      transform   );
   }
-
   SLSTransactionSetWindowLevel(transaction, border->wid, level);
   SLSTransactionSetWindowSubLevel(transaction, border->wid, sub_level);
   SLSTransactionOrderWindow(transaction,

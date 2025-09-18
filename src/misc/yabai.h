@@ -171,6 +171,7 @@ static inline void yabai_proxy_end(struct table* windows, uint32_t wid, uint32_t
       CFRelease(transaction);
     }
 
+    animation_stop(&proxy->animation);
     border_destroy(proxy);
 
     struct yabai_proxy_payload* payload

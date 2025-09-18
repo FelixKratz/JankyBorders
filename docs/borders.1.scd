@@ -68,7 +68,7 @@ could be issued.
 	Either _on_ or _off_.
 
 *<style>*
-	Either _round_ or _square_.
+	Either _round_, _square_, or _uniform_.
 
 *<color>*
 	A color formatted as _0xAARRGGBB_, where _A_ is the alpha channel, _R_ the

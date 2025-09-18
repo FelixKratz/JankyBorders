@@ -76,9 +76,10 @@ static inline void drawing_draw_square_gradient_with_inset(CGContextRef context,
   CGContextDrawLinearGradient(context, gradient, dir[0], dir[1], 0);
 }
 
-static inline void drawing_draw_rounded_rect_with_inset(CGContextRef context, CGRect rect, float border_radius) {
+static inline void drawing_draw_rounded_rect_with_inset(CGContextRef context, CGRect rect, float border_radius, bool fill) {
   drawing_add_rounded_rect(context, rect, border_radius);
-  CGContextStrokePath(context);
+  if (fill) CGContextFillPath(context);
+  else CGContextStrokePath(context);
 }
 
 static inline void drawing_draw_rounded_gradient_with_inset(CGContextRef context,CGGradientRef gradient, CGPoint dir[2], CGRect rect, float border_radius) {

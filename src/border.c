@@ -153,17 +153,27 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                                               -settings->border_width / 2.f);
     }
   } else {
+    float corner_radius = settings->border_style == BORDER_STYLE_ROUND_UNIFORM ? 9.0 : border->radius;
+
+    if (settings->border_style == BORDER_STYLE_ROUND_UNIFORM) {
+      drawing_draw_rounded_rect_with_inset(border->context,
+                                           path_rect,
+                                           corner_radius,
+                                           true            );
+    }
+
     if (color_style.stype == COLOR_STYLE_SOLID
        || color_style.stype == COLOR_STYLE_GLOW) {
       drawing_draw_rounded_rect_with_inset(border->context,
                                            path_rect,
-                                           border->radius  );
+                                           corner_radius,
+                                           false           );
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
       drawing_draw_rounded_gradient_with_inset(border->context,
                                                gradient,
                                                gradient_dir,
                                                path_rect,
-                                               border->radius  );
+                                               corner_radius  );
     }
   }
   CGGradientRelease(gradient);

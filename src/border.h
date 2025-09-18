@@ -9,6 +9,7 @@
 #define BORDER_ORDER_ABOVE 1
 #define BORDER_ORDER_BELOW -1
 #define BORDER_STYLE_ROUND  'r'
+#define BORDER_STYLE_ROUND_UNIFORM 'u'
 #define BORDER_STYLE_SQUARE 's'
 #define BORDER_PADDING 8.0
 #define BORDER_TSMN 3.27f
@@ -33,6 +34,7 @@ struct settings {
 
   struct color_style active_window;
   struct color_style inactive_window;
+  struct color_style corner_mask;
   struct color_style background;
 
   float border_width;

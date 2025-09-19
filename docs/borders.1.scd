@@ -18,7 +18,7 @@ API, thereby being faster than comparable tools.
 # OPTIONS
 
 *style=<style>*
-	Specifies the style of the border (either _round_ or _square_)
+	Specifies the style of the border (either _round_, _square_ or _uniform_)
 
 *active_color=<color>*
 	Sets the border color for the focused window (format: _0xAARRGGBB_). For

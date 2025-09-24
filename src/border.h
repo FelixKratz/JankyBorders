@@ -11,6 +11,7 @@
 #define BORDER_STYLE_ROUND  'r'
 #define BORDER_STYLE_ROUND_UNIFORM 'u'
 #define BORDER_STYLE_SQUARE 's'
+#define BORDER_STYLE_NONE 'n'
 #define BORDER_PADDING 8.0
 #define BORDER_TSMN 3.27f
 

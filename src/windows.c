@@ -8,6 +8,9 @@
 extern pid_t g_pid;
 extern struct settings g_settings;
 
+// Loaded via dlsym in main.c
+extern CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
+
 static bool window_in_list(struct table* list, char* app_name) {
   if (table_find(list, app_name)) return true;
   return false;
@@ -60,17 +63,15 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
 
           int32_t radius = 0;
 
-          // Determine window corner radius in macOS 26+
-          #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-            if (__builtin_available(macOS 26.0, *)) {
-              CFArrayRef radii_ref = SLSWindowIteratorGetCornerRadii(iterator);
-              if (radii_ref && CFArrayGetCount(radii_ref) > 0) {
-                CFNumberRef value = CFArrayGetValueAtIndex(radii_ref, 0);
-                CFNumberGetValue(value, kCFNumberSInt32Type, &radius);
-              }
-              if (radii_ref) CFRelease(radii_ref);
+          // Determine window corner radius
+          if (JBSLSWindowIteratorGetCornerRadii) {
+            CFArrayRef radii_ref = JBSLSWindowIteratorGetCornerRadii(iterator);
+            if (radii_ref && CFArrayGetCount(radii_ref) > 0) {
+              CFNumberRef value = CFArrayGetValueAtIndex(radii_ref, 0);
+              CFNumberGetValue(value, kCFNumberSInt32Type, &radius);
             }
-          #endif
+            if (radii_ref) CFRelease(radii_ref);
+          }
           radius = radius > 0 ? radius : 9;
 
           border->radius = radius;

@@ -93,7 +93,7 @@ void *macho_find_symbol(char *target_image, char *target_symbol) {
   return NULL;
 }
 
-static mach_port_t (* CGSGetConnectionPortById)(int);
+static mach_port_t (* CGSGetConnectionPortById)(int) = NULL;
 
 mach_port_t create_connection_server_port() {
   CGSGetConnectionPortById = macho_find_symbol("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", "_CGSGetConnectionPortById");

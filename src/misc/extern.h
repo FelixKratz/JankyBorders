@@ -1,6 +1,5 @@
 #pragma once
 #include <CoreGraphics/CoreGraphics.h>
-
 extern mach_port_t SLSServerPort(void* zero);
 extern mach_port_t mig_get_special_reply_port(void);
 extern mach_port_t mig_dealloc_special_reply_port(mach_port_t port);
@@ -72,10 +71,6 @@ extern uint32_t SLSWindowIteratorGetWindowID(CFTypeRef iterator);
 extern uint64_t SLSWindowIteratorGetTags(CFTypeRef iterator);
 extern uint64_t SLSWindowIteratorGetAttributes(CFTypeRef iterator);
 extern int SLSWindowIteratorGetLevel(CFTypeRef iterator);
-
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-extern CFArrayRef SLSWindowIteratorGetCornerRadii(CFTypeRef iterator);
-#endif
 
 extern CFArrayRef SLSCopyManagedDisplays(int cid);
 extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);

@@ -9,6 +9,7 @@
 #include "misc/ax.h"
 #include "misc/yabai.h"
 #include <stdio.h>
+#include <dlfcn.h>
 
 #define VERSION_OPT_LONG "--version"
 #define VERSION_OPT_SHRT "-v"
@@ -19,6 +20,9 @@
 #define MAJOR 1
 #define MINOR 8
 #define PATCH 3
+
+// Resolved via dlsym because of availability
+CFArrayRef (* JBSLSWindowIteratorGetCornerRadii)(CFTypeRef) = NULL;
 
 pid_t g_pid;
 mach_port_t g_server_port;
@@ -155,6 +159,15 @@ static void event_callback(CFMachPortRef port, void* message, CFIndex size, void
   } while (event);
 }
 
+void load_symbols() {
+  if (__builtin_available(macOS 26.0, *)) {
+    void* lib = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY | RTLD_LOCAL);
+    if (lib) {
+      JBSLSWindowIteratorGetCornerRadii = dlsym(lib, "SLSWindowIteratorGetCornerRadii");
+    }
+  }
+}
+
 int main(int argc, char** argv) {
   if (argc > 1 && ((strcmp(argv[1], VERSION_OPT_LONG) == 0)
                    || (strcmp(argv[1], VERSION_OPT_SHRT) == 0))) {
@@ -183,6 +196,7 @@ int main(int argc, char** argv) {
           " provide them as arguments.\n");
   }
 
+  load_symbols();
   pid_for_task(mach_task_self(), &g_pid);
   table_init(&g_windows, 1024, hash_windows, cmp_windows);
 

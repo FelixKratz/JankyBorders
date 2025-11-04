@@ -1,9 +1,12 @@
 #include "windows.h"
 #include "hashtable.h"
 #include "border.h"
+#include "misc/blacklist.h"
 #include "misc/ax.h"
+#include <CoreGraphics/CGWindow.h>
 #include <string.h>
 #include <libproc.h>
+#include <stdlib.h>
 
 extern pid_t g_pid;
 extern struct settings g_settings;
@@ -11,18 +14,81 @@ extern struct settings g_settings;
 // Loaded via dlsym in main.c
 extern CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
 
+static char* window_copy_title(uint32_t wid) {
+  CFArrayRef window_list = cfarray_of_cfnumbers(&wid,
+                                                sizeof(uint32_t),
+                                                1,
+                                                kCFNumberSInt32Type);
+  if (!window_list) return NULL;
+
+  CFArrayRef descriptions = CGWindowListCreateDescriptionFromArray(window_list);
+  CFRelease(window_list);
+  if (!descriptions) return NULL;
+
+  char* title = NULL;
+  if (CFArrayGetCount(descriptions) > 0) {
+    CFDictionaryRef description = CFArrayGetValueAtIndex(descriptions, 0);
+    if (description) {
+      CFStringRef title_ref = CFDictionaryGetValue(description, kCGWindowName);
+      if (title_ref && CFGetTypeID(title_ref) == CFStringGetTypeID()) {
+        CFIndex length = CFStringGetLength(title_ref);
+        CFIndex max_size = CFStringGetMaximumSizeForEncoding(length,
+                                                             kCFStringEncodingUTF8);
+        title = malloc((max_size + 1) * sizeof(char));
+        if (title) {
+          if (!CFStringGetCString(title_ref,
+                                  title,
+                                  max_size + 1,
+                                  kCFStringEncodingUTF8)) {
+            free(title);
+            title = NULL;
+          }
+        }
+      }
+    }
+  }
+
+  CFRelease(descriptions);
+  return title;
+}
+
 static bool window_in_list(struct table* list, char* app_name) {
   if (table_find(list, app_name)) return true;
   return false;
 }
 
-static bool app_allowed(struct settings* settings, char* app_name) {
+static bool window_in_blacklist(struct table* list,
+                                char* app_name,
+                                uint32_t wid) {
+  struct blacklist_rule* rule = table_find(list, app_name);
+  if (!rule) return false;
+
+  if (rule->match_all_windows || rule->pattern_count == 0) return true;
+
+  char* title = window_copy_title(wid);
+  const char* window_title = title ? title : "";
+  bool matched = false;
+
+  for (size_t i = 0; i < rule->pattern_count; ++i) {
+    if (regexec(&rule->patterns[i].regex, window_title, 0, NULL, 0) == 0) {
+      matched = true;
+      break;
+    }
+  }
+
+  if (title) free(title);
+  return matched;
+}
+
+static bool app_allowed(struct settings* settings,
+                        char* app_name,
+                        uint32_t wid) {
   if (settings->whitelist_enabled
       && !window_in_list(&settings->whitelist, app_name)) {
     return false;
   }
   if (settings->blacklist_enabled
-      && window_in_list(&settings->blacklist, app_name)) {
+      && window_in_blacklist(&settings->blacklist, app_name, wid)) {
     return false;
   }
   return true;
@@ -39,7 +105,8 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
-  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
+  if (pid == g_pid
+      || !app_allowed(&g_settings, pid_name_buffer, wid)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),

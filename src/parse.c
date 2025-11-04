@@ -1,12 +1,123 @@
 #include "parse.h"
 #include "border.h"
 #include "hashtable.h"
+#include "misc/blacklist.h"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static bool str_starts_with(char* string, char* prefix) {
   if (!string || !prefix) return false;
   if (strlen(string) < strlen(prefix)) return false;
   if (strncmp(prefix, string, strlen(prefix)) == 0) return true;
   return false;
+}
+
+static char* trim_whitespace(char* text) {
+  if (!text) return text;
+  while (*text && isspace((unsigned char)*text)) text++;
+  char* end = text + strlen(text);
+  while (end > text && isspace((unsigned char)*(end - 1))) {
+    --end;
+    *end = '\0';
+  }
+  return text;
+}
+
+static void blacklist_reset(struct table* list) {
+  for (int i = 0; i < list->capacity; ++i) {
+    struct bucket* bucket = list->buckets[i];
+    while (bucket) {
+      if (bucket->value) {
+        blacklist_rule_free((struct blacklist_rule*)bucket->value);
+        bucket->value = NULL;
+      }
+      bucket = bucket->next;
+    }
+  }
+  table_clear(list);
+}
+
+static bool parse_blacklist(struct table* list, char* token) {
+  uint32_t token_len = strlen(token) + 1;
+  char copy[token_len];
+  memcpy(copy, token, token_len);
+
+  char* entry = NULL;
+  char* cursor = copy;
+  bool entry_found = false;
+
+  blacklist_reset(list);
+
+  while ((entry = strsep(&cursor, ","))) {
+    char* trimmed = trim_whitespace(entry);
+    if (!trimmed || strlen(trimmed) == 0) continue;
+
+    char* app = trimmed;
+    char* regex = strchr(trimmed, ':');
+    if (regex) {
+      *regex = '\0';
+      regex = trim_whitespace(regex + 1);
+    }
+    app = trim_whitespace(app);
+    if (!app || strlen(app) == 0) continue;
+
+    struct blacklist_rule* rule = table_find(list, app);
+    if (!rule) {
+      rule = calloc(1, sizeof(*rule));
+      if (!rule) {
+        printf("[!] Borders: Out of memory while parsing blacklist entry '%s'\n", app);
+        continue;
+      }
+      _table_add(list, app, strlen(app) + 1, rule);
+    }
+
+    if (!regex || strlen(regex) == 0) {
+      rule->match_all_windows = true;
+      entry_found = true;
+      continue;
+    }
+
+    regex_t compiled;
+    int error = regcomp(&compiled, regex, REG_EXTENDED | REG_NOSUB);
+    if (error) {
+      char error_buffer[128];
+      regerror(error, &compiled, error_buffer, sizeof(error_buffer));
+      printf("[?] Borders: Invalid blacklist regex '%s' for '%s': %s\n",
+             regex,
+             app,
+             error_buffer);
+      continue;
+    }
+
+    char* pattern_copy = strdup(regex);
+    if (!pattern_copy) {
+      printf("[!] Borders: Failed to copy blacklist regex '%s'\n", regex);
+      regfree(&compiled);
+      continue;
+    }
+
+    struct blacklist_pattern* patterns = realloc(rule->patterns,
+                                                 (rule->pattern_count + 1)
+                                                 * sizeof(struct blacklist_pattern));
+    if (!patterns) {
+      printf("[!] Borders: Failed to allocate memory for blacklist regex '%s'\n",
+             regex);
+      regfree(&compiled);
+      free(pattern_copy);
+      continue;
+    }
+
+    rule->patterns = patterns;
+    rule->patterns[rule->pattern_count].regex = compiled;
+    rule->patterns[rule->pattern_count].pattern = pattern_copy;
+    rule->pattern_count++;
+    entry_found = true;
+  }
+
+  return entry_found;
 }
 
 static bool parse_list(struct table* list, char* token) {
@@ -88,9 +199,9 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {
-      settings->blacklist_enabled = parse_list(&settings->blacklist,
-                                               arguments[i]
-                                               + strlen(blacklist));
+      settings->blacklist_enabled = parse_blacklist(&settings->blacklist,
+                                                    arguments[i]
+                                                    + strlen(blacklist));
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (str_starts_with(arguments[i], whitelist)) {

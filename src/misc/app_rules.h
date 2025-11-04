@@ -6,7 +6,6 @@
 
 struct app_rule_pattern {
   regex_t regex;
-  char* pattern;
 };
 
 struct app_rule {
@@ -19,7 +18,6 @@ static inline void app_rule_free(struct app_rule* rule) {
   if (!rule) return;
   for (size_t i = 0; i < rule->pattern_count; ++i) {
     regfree(&rule->patterns[i].regex);
-    free(rule->patterns[i].pattern);
   }
   free(rule->patterns);
   free(rule);

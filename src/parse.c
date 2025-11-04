@@ -109,14 +109,6 @@ static bool parse_app_rules(struct table* list,
       continue;
     }
 
-    char* pattern_copy = strdup(regex);
-    if (!pattern_copy) {
-      printf("[!] Borders: Failed to copy %s regex '%s'\n", list_name, regex);
-      regfree(&compiled);
-      prune_empty_rule(list, app, rule);
-      continue;
-    }
-
     struct app_rule_pattern* patterns = realloc(rule->patterns,
                                                 (rule->pattern_count + 1)
                                                 * sizeof(struct app_rule_pattern));
@@ -125,14 +117,12 @@ static bool parse_app_rules(struct table* list,
              list_name,
              regex);
       regfree(&compiled);
-      free(pattern_copy);
       prune_empty_rule(list, app, rule);
       continue;
     }
 
     rule->patterns = patterns;
     rule->patterns[rule->pattern_count].regex = compiled;
-    rule->patterns[rule->pattern_count].pattern = pattern_copy;
     rule->pattern_count++;
     entry_found = true;
   }

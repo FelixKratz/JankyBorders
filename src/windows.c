@@ -1,7 +1,7 @@
 #include "windows.h"
 #include "hashtable.h"
 #include "border.h"
-#include "misc/blacklist.h"
+#include "misc/app_rules.h"
 #include "misc/ax.h"
 #include <CoreGraphics/CGWindow.h>
 #include <string.h>
@@ -52,45 +52,46 @@ static char* window_copy_title(uint32_t wid) {
   return title;
 }
 
-static bool window_in_list(struct table* list, char* app_name) {
-  if (table_find(list, app_name)) return true;
-  return false;
-}
-
-static bool window_in_blacklist(struct table* list,
-                                char* app_name,
-                                uint32_t wid) {
-  struct blacklist_rule* rule = table_find(list, app_name);
-  if (!rule) return false;
-
-  if (rule->match_all_windows || rule->pattern_count == 0) return true;
-
-  char* title = window_copy_title(wid);
-  const char* window_title = title ? title : "";
-  bool matched = false;
-
-  for (size_t i = 0; i < rule->pattern_count; ++i) {
-    if (regexec(&rule->patterns[i].regex, window_title, 0, NULL, 0) == 0) {
-      matched = true;
-      break;
-    }
-  }
-
-  if (title) free(title);
-  return matched;
-}
-
 static bool app_allowed(struct settings* settings,
                         char* app_name,
                         uint32_t wid) {
-  if (settings->whitelist_enabled
-      && !window_in_list(&settings->whitelist, app_name)) {
-    return false;
+  struct app_rule* whitelist_rule = NULL;
+  struct app_rule* blacklist_rule = NULL;
+  char* title_buffer = NULL;
+  const char* window_title = NULL;
+
+  if (settings->whitelist_enabled) {
+    whitelist_rule = table_find(&settings->whitelist, app_name);
+    if (!whitelist_rule) return false;
+    if (!whitelist_rule->match_all_windows) {
+      title_buffer = window_copy_title(wid);
+      window_title = title_buffer ? title_buffer : "";
+      if (!app_rule_matches(whitelist_rule, window_title)) {
+        if (title_buffer) free(title_buffer);
+        return false;
+      }
+    }
   }
-  if (settings->blacklist_enabled
-      && window_in_blacklist(&settings->blacklist, app_name, wid)) {
-    return false;
+
+  if (settings->blacklist_enabled) {
+    blacklist_rule = table_find(&settings->blacklist, app_name);
+    if (blacklist_rule) {
+      if (blacklist_rule->match_all_windows) {
+        if (title_buffer) free(title_buffer);
+        return false;
+      }
+      if (!window_title) {
+        title_buffer = window_copy_title(wid);
+        window_title = title_buffer ? title_buffer : "";
+      }
+      if (app_rule_matches(blacklist_rule, window_title)) {
+        if (title_buffer) free(title_buffer);
+        return false;
+      }
+    }
   }
+
+  if (title_buffer) free(title_buffer);
   return true;
 }
 

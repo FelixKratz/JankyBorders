@@ -1,7 +1,7 @@
 #include "parse.h"
 #include "border.h"
 #include "hashtable.h"
-#include "misc/blacklist.h"
+#include "misc/app_rules.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -26,12 +26,12 @@ static char* trim_whitespace(char* text) {
   return text;
 }
 
-static void blacklist_reset(struct table* list) {
+static void rules_reset(struct table* list) {
   for (int i = 0; i < list->capacity; ++i) {
     struct bucket* bucket = list->buckets[i];
     while (bucket) {
       if (bucket->value) {
-        blacklist_rule_free((struct blacklist_rule*)bucket->value);
+        app_rule_free((struct app_rule*)bucket->value);
         bucket->value = NULL;
       }
       bucket = bucket->next;
@@ -40,7 +40,20 @@ static void blacklist_reset(struct table* list) {
   table_clear(list);
 }
 
-static bool parse_blacklist(struct table* list, char* token) {
+static void prune_empty_rule(struct table* list,
+                             const char* app,
+                             struct app_rule* rule) {
+  if (!rule) return;
+  if (rule->match_all_windows) return;
+  if (rule->pattern_count > 0) return;
+
+  app_rule_free(rule);
+  table_remove(list, (void*)app);
+}
+
+static bool parse_app_rules(struct table* list,
+                            char* token,
+                            const char* list_name) {
   uint32_t token_len = strlen(token) + 1;
   char copy[token_len];
   memcpy(copy, token, token_len);
@@ -49,7 +62,7 @@ static bool parse_blacklist(struct table* list, char* token) {
   char* cursor = copy;
   bool entry_found = false;
 
-  blacklist_reset(list);
+  rules_reset(list);
 
   while ((entry = strsep(&cursor, ","))) {
     char* trimmed = trim_whitespace(entry);
@@ -64,11 +77,13 @@ static bool parse_blacklist(struct table* list, char* token) {
     app = trim_whitespace(app);
     if (!app || strlen(app) == 0) continue;
 
-    struct blacklist_rule* rule = table_find(list, app);
+    struct app_rule* rule = table_find(list, app);
     if (!rule) {
       rule = calloc(1, sizeof(*rule));
       if (!rule) {
-        printf("[!] Borders: Out of memory while parsing blacklist entry '%s'\n", app);
+        printf("[!] Borders: Out of memory while parsing %s entry '%s'\n",
+               list_name,
+               app);
         continue;
       }
       _table_add(list, app, strlen(app) + 1, rule);
@@ -85,28 +100,33 @@ static bool parse_blacklist(struct table* list, char* token) {
     if (error) {
       char error_buffer[128];
       regerror(error, &compiled, error_buffer, sizeof(error_buffer));
-      printf("[?] Borders: Invalid blacklist regex '%s' for '%s': %s\n",
+      printf("[?] Borders: Invalid %s regex '%s' for '%s': %s\n",
+             list_name,
              regex,
              app,
              error_buffer);
+      prune_empty_rule(list, app, rule);
       continue;
     }
 
     char* pattern_copy = strdup(regex);
     if (!pattern_copy) {
-      printf("[!] Borders: Failed to copy blacklist regex '%s'\n", regex);
+      printf("[!] Borders: Failed to copy %s regex '%s'\n", list_name, regex);
       regfree(&compiled);
+      prune_empty_rule(list, app, rule);
       continue;
     }
 
-    struct blacklist_pattern* patterns = realloc(rule->patterns,
-                                                 (rule->pattern_count + 1)
-                                                 * sizeof(struct blacklist_pattern));
+    struct app_rule_pattern* patterns = realloc(rule->patterns,
+                                                (rule->pattern_count + 1)
+                                                * sizeof(struct app_rule_pattern));
     if (!patterns) {
-      printf("[!] Borders: Failed to allocate memory for blacklist regex '%s'\n",
+      printf("[!] Borders: Failed to allocate memory for %s regex '%s'\n",
+             list_name,
              regex);
       regfree(&compiled);
       free(pattern_copy);
+      prune_empty_rule(list, app, rule);
       continue;
     }
 
@@ -117,25 +137,6 @@ static bool parse_blacklist(struct table* list, char* token) {
     entry_found = true;
   }
 
-  return entry_found;
-}
-
-static bool parse_list(struct table* list, char* token) {
-  uint32_t token_len = strlen(token) + 1;
-  char copy[token_len];
-  memcpy(copy, token, token_len);
-
-  char* name;
-  char* cursor = copy;
-  bool entry_found = false;
-
-  table_clear(list);
-  while((name = strsep(&cursor, ","))) {
-    if (strlen(name) > 0) {
-      _table_add(list, name, strlen(name) + 1, (void*)true);
-      entry_found = true;
-    }
-  }
   return entry_found;
 }
 
@@ -199,15 +200,17 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {
-      settings->blacklist_enabled = parse_blacklist(&settings->blacklist,
+      settings->blacklist_enabled = parse_app_rules(&settings->blacklist,
                                                     arguments[i]
-                                                    + strlen(blacklist));
+                                                    + strlen(blacklist),
+                                                    "blacklist");
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (str_starts_with(arguments[i], whitelist)) {
-      settings->whitelist_enabled = parse_list(&settings->whitelist,
-                                               arguments[i]
-                                               + strlen(whitelist));
+      settings->whitelist_enabled = parse_app_rules(&settings->whitelist,
+                                                    arguments[i]
+                                                    + strlen(whitelist),
+                                                    "whitelist");
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {

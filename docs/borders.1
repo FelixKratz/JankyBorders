@@ -78,8 +78,14 @@ windows and kitty windows whose titles match either expression.\&
 .RE
 \fBwhitelist=<application_list>\fR
 .RS 4
-Once this list is populated, only applications listed here are considered
-for receiving a border.\& If the whitelist is empty (default) it is inactive.\&
+Once this list is populated, only windows that match at least one rule are
+considered for a border.\& The format mirrors \fBblacklist\fR: each entry begins
+with the application name and may append \fC:<regex>\fR to target specific
+window titles.\& Rules without a regex allow every window from that
+application, while additional rules can refine allowed titles.\& For example,
+whitelist="Safari,kitty:^Work" draws borders for all Safari windows and kitty
+windows whose titles start with "Work".\& The blacklist is evaluated afterwards
+and can still be used to exclude subsets.\&
 .PP
 .RE
 If an instance of \fBborders\fR is already running, subsequent invocations will

@@ -54,8 +54,14 @@ API, thereby being faster than comparable tools.
 	windows and kitty windows whose titles match either expression.
 
 *whitelist=<application_list>*
-	Once this list is populated, only applications listed here are considered
-	for receiving a border. If the whitelist is empty (default) it is inactive.
+	Once this list is populated, only windows that match at least one rule are
+	considered for a border. The format mirrors *blacklist*: each entry begins
+	with the application name and may append `:<regex>` to target specific
+	window titles. Rules without a regex allow every window from that
+	application, while additional rules can refine allowed titles. For
+	example, whitelist="Safari,kitty:^Work" draws borders for all Safari
+	windows and kitty windows whose titles start with "Work". The blacklist
+	is evaluated afterwards and can still be used to exclude subsets.
 
 If an instance of *borders* is already running, subsequent invocations will
 update the existing process with the new arguments.

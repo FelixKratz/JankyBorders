@@ -7,6 +7,7 @@
 #include <string.h>
 #include <libproc.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 extern pid_t g_pid;
 extern struct settings g_settings;
@@ -14,83 +15,194 @@ extern struct settings g_settings;
 // Loaded via dlsym in main.c
 extern CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
 
-static char* window_copy_title(uint32_t wid) {
-  CFArrayRef window_list = cfarray_of_cfnumbers(&wid,
-                                                sizeof(uint32_t),
-                                                1,
-                                                kCFNumberSInt32Type);
-  if (!window_list) return NULL;
+static char* copy_string_from_cfstring(CFStringRef value) {
+  if (!value || CFGetTypeID(value) != CFStringGetTypeID()) return NULL;
+  CFIndex length = CFStringGetLength(value);
+  CFIndex max_size = CFStringGetMaximumSizeForEncoding(length,
+                                                       kCFStringEncodingUTF8);
+  char* buffer = malloc((max_size + 1) * sizeof(char));
+  if (!buffer) return NULL;
+  if (!CFStringGetCString(value, buffer, max_size + 1, kCFStringEncodingUTF8)) {
+    free(buffer);
+    return NULL;
+  }
+  return buffer;
+}
 
-  CFArrayRef descriptions = CGWindowListCreateDescriptionFromArray(window_list);
-  CFRelease(window_list);
-  if (!descriptions) return NULL;
-
-  char* title = NULL;
-  if (CFArrayGetCount(descriptions) > 0) {
-    CFDictionaryRef description = CFArrayGetValueAtIndex(descriptions, 0);
-    if (description) {
-      CFStringRef title_ref = CFDictionaryGetValue(description, kCGWindowName);
-      if (title_ref && CFGetTypeID(title_ref) == CFStringGetTypeID()) {
-        CFIndex length = CFStringGetLength(title_ref);
-        CFIndex max_size = CFStringGetMaximumSizeForEncoding(length,
-                                                             kCFStringEncodingUTF8);
-        title = malloc((max_size + 1) * sizeof(char));
-        if (title) {
-          if (!CFStringGetCString(title_ref,
-                                  title,
-                                  max_size + 1,
-                                  kCFStringEncodingUTF8)) {
-            free(title);
-            title = NULL;
-          }
-        }
-      }
-    }
+static char* window_title_from_ax(uint32_t wid, pid_t pid) {
+  if (!ax_check_trust(true)) {
+    printf("[Borders][title] wid=%u: AX unavailable (no trust)\n", wid);
+    return NULL;
   }
 
-  CFRelease(descriptions);
+  AXUIElementRef app = AXUIElementCreateApplication(pid);
+  if (!app) return NULL;
+
+  CFArrayRef window_list = NULL;
+  AXError error = AXUIElementCopyAttributeValue(app,
+                                                kAXWindowsAttribute,
+                                                (CFTypeRef*)&window_list);
+  if (error != kAXErrorSuccess || !window_list) {
+    if (app) CFRelease(app);
+    return NULL;
+  }
+
+  char* title = NULL;
+  CFIndex count = CFArrayGetCount(window_list);
+  for (CFIndex i = 0; i < count; ++i) {
+    AXUIElementRef window = CFArrayGetValueAtIndex(window_list, i);
+    if (!window) continue;
+
+    uint32_t window_id = 0;
+    _AXUIElementGetWindow(window, &window_id);
+    if (window_id != wid) continue;
+
+    CFStringRef title_ref = NULL;
+    AXError title_error = AXUIElementCopyAttributeValue(window,
+                                                        kAXTitleAttribute,
+                                                        (CFTypeRef*)&title_ref);
+    if (title_error == kAXErrorSuccess && title_ref) {
+      title = copy_string_from_cfstring(title_ref);
+      CFRelease(title_ref);
+      break;
+    }
+    if (title_ref) CFRelease(title_ref);
+  }
+
+  if (window_list) CFRelease(window_list);
+  CFRelease(app);
+
+  printf("[Borders][title] wid=%u: AX result='%s'\n",
+         wid,
+         title ? title : "<null>");
+
   return title;
+}
+
+static char* window_copy_title(uint32_t wid, pid_t pid) {
+  char* title = window_title_from_ax(wid, pid);
+  if (title && strlen(title) > 0) return title;
+
+  if (title) {
+    free(title);
+    title = NULL;
+  }
+
+  return NULL;
+}
+
+static bool app_rule_matches_verbose(const char* list_name,
+                                     const char* app_name,
+                                     uint32_t wid,
+                                     const struct app_rule* rule,
+                                     const char* title) {
+  if (!title) title = "";
+  if (!rule) {
+    printf("[Borders][%s] wid=%u app='%s': no rule found\n",
+           list_name,
+           wid,
+           app_name);
+    return false;
+  }
+
+  if (rule->match_all_windows) {
+    printf("[Borders][%s] wid=%u app='%s': match_all_windows=true\n",
+           list_name,
+           wid,
+           app_name);
+    return true;
+  }
+
+  if (rule->pattern_count == 0) {
+    printf("[Borders][%s] wid=%u app='%s': no patterns available\n",
+           list_name,
+           wid,
+           app_name);
+    return false;
+  }
+
+  bool matched = false;
+  for (size_t i = 0; i < rule->pattern_count; ++i) {
+    const char* pattern = rule->patterns[i].pattern
+                          ? rule->patterns[i].pattern
+                          : "<null>";
+    int result = regexec(&rule->patterns[i].regex, title, 0, NULL, 0);
+    printf("[Borders][%s] wid=%u app='%s': title='%s' pattern[%zu]='%s' -> %s\n",
+           list_name,
+           wid,
+           app_name,
+           title,
+           i,
+           pattern,
+           result == 0 ? "match" : "no match");
+    if (result == 0) matched = true;
+  }
+
+  printf("[Borders][%s] wid=%u app='%s': final match=%s\n",
+         list_name,
+         wid,
+         app_name,
+         matched ? "true" : "false");
+
+  return matched;
 }
 
 static bool app_allowed(struct settings* settings,
                         char* app_name,
-                        uint32_t wid) {
-  struct app_rule* whitelist_rule = NULL;
-  struct app_rule* blacklist_rule = NULL;
-  char* title_buffer = NULL;
-  const char* window_title = NULL;
+                        uint32_t wid,
+                        pid_t pid) {
+  char* title_buffer = window_copy_title(wid, pid);
+  const char* window_title = title_buffer ? title_buffer : "";
+
+  printf("[Borders] evaluating wid=%u app='%s' title='%s'%s\n",
+         wid,
+         app_name,
+         window_title,
+         title_buffer ? "" : " (unavailable)");
 
   if (settings->whitelist_enabled) {
-    whitelist_rule = table_find(&settings->whitelist, app_name);
-    if (!whitelist_rule) return false;
-    if (!whitelist_rule->match_all_windows) {
-      title_buffer = window_copy_title(wid);
-      window_title = title_buffer ? title_buffer : "";
-      if (!app_rule_matches(whitelist_rule, window_title)) {
-        if (title_buffer) free(title_buffer);
-        return false;
-      }
+    struct app_rule* whitelist_rule = table_find(&settings->whitelist,
+                                                 app_name);
+    bool allowed = app_rule_matches_verbose("whitelist",
+                                            app_name,
+                                            wid,
+                                            whitelist_rule,
+                                            window_title);
+    if (!allowed) {
+      printf("[Borders] wid=%u app='%s': denied by whitelist\n",
+             wid,
+             app_name);
+      if (title_buffer) free(title_buffer);
+      return false;
     }
+  } else {
+    printf("[Borders] wid=%u app='%s': whitelist disabled\n",
+           wid,
+           app_name);
   }
 
   if (settings->blacklist_enabled) {
-    blacklist_rule = table_find(&settings->blacklist, app_name);
-    if (blacklist_rule) {
-      if (blacklist_rule->match_all_windows) {
-        if (title_buffer) free(title_buffer);
-        return false;
-      }
-      if (!window_title) {
-        title_buffer = window_copy_title(wid);
-        window_title = title_buffer ? title_buffer : "";
-      }
-      if (app_rule_matches(blacklist_rule, window_title)) {
-        if (title_buffer) free(title_buffer);
-        return false;
-      }
+    struct app_rule* blacklist_rule = table_find(&settings->blacklist,
+                                                 app_name);
+    bool blocked = app_rule_matches_verbose("blacklist",
+                                            app_name,
+                                            wid,
+                                            blacklist_rule,
+                                            window_title);
+    if (blocked) {
+      printf("[Borders] wid=%u app='%s': blocked by blacklist\n",
+             wid,
+             app_name);
+      if (title_buffer) free(title_buffer);
+      return false;
     }
+  } else {
+    printf("[Borders] wid=%u app='%s': blacklist disabled\n",
+           wid,
+           app_name);
   }
 
+  printf("[Borders] wid=%u app='%s': allowed\n", wid, app_name);
   if (title_buffer) free(title_buffer);
   return true;
 }
@@ -107,7 +219,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
   if (pid == g_pid
-      || !app_allowed(&g_settings, pid_name_buffer, wid)) return false;
+      || !app_allowed(&g_settings, pid_name_buffer, wid, pid)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),

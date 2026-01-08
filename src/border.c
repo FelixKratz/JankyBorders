@@ -6,6 +6,16 @@
 
 extern struct settings g_settings;
 
+static dispatch_queue_t g_border_update_queue = NULL;
+
+__attribute__((constructor))
+static void border_init_queue(void) {
+  g_border_update_queue = dispatch_queue_create(
+    "com.felixkratz.borders.update",
+    DISPATCH_QUEUE_SERIAL
+  );
+}
+
 struct settings* border_get_settings(struct border* border) {
   assert(pthread_main_np() != 0);
   return border->setting_override.enabled
@@ -334,6 +344,17 @@ struct border* border_create() {
 }
 
 void border_destroy(struct border* border) {
+  pthread_mutex_lock(&border->mutex);
+  border->is_being_destroyed = true;
+  if (border->wid) {
+    CFTypeRef transaction = SLSTransactionCreate(border->cid);
+    if (transaction) {
+      SLSTransactionSetWindowAlpha(transaction, border->wid, 0.f);
+      SLSTransactionCommit(transaction, 1);
+      CFRelease(transaction);
+    }
+  }
+  pthread_mutex_unlock(&border->mutex);
   border_hide(border);
   dispatch_async(dispatch_get_main_queue(), ^{
     pthread_mutex_lock(&border->mutex);
@@ -349,7 +370,7 @@ void border_destroy(struct border* border) {
 
 void border_move(struct border* border) {
   pthread_mutex_lock(&border->mutex);
-  if (border->external_proxy_wid) {
+  if (border->is_being_destroyed || border->external_proxy_wid) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
@@ -358,6 +379,10 @@ void border_move(struct border* border) {
   struct settings* settings = border_get_settings(border);
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
     pthread_mutex_lock(&border->mutex);
+    if (border->is_being_destroyed) {
+      pthread_mutex_unlock(&border->mutex);
+      return;
+    }
     CGRect window_frame;
     if (!border_coalesce_resize_and_move_events(border, &window_frame)) {
       pthread_mutex_unlock(&border->mutex);
@@ -385,6 +410,10 @@ void border_move(struct border* border) {
 
 void border_update(struct border* border, bool try_async) {
   pthread_mutex_lock(&border->mutex);
+  if (border->is_being_destroyed) {
+    pthread_mutex_unlock(&border->mutex);
+    return;
+  }
   struct settings* settings = border_get_settings(border);
   if (!border->wid || !try_async) {
     border_update_internal(border, settings);
@@ -392,18 +421,17 @@ void border_update(struct border* border, bool try_async) {
     return;
   }
 
-  struct payload {
-    struct border* border;
-    struct settings settings;
-  }* payload = malloc(sizeof(struct payload));
-
-  payload->border = border;
-  payload->settings = *settings;
-
-  pthread_t thread;
-  pthread_create(&thread, NULL, border_update_async_proc, payload);
-  pthread_detach(thread);
+  struct settings settings_copy = *settings;
   pthread_mutex_unlock(&border->mutex);
+
+  dispatch_async(g_border_update_queue, ^{
+    pthread_mutex_lock(&border->mutex);
+    if (!border->is_being_destroyed) {
+      struct settings s = settings_copy;
+      border_update_internal(border, &s);
+    }
+    pthread_mutex_unlock(&border->mutex);
+  });
 }
 
 void border_hide(struct border* border) {
@@ -424,7 +452,8 @@ void border_hide(struct border* border) {
 
 void border_unhide(struct border* border) {
   pthread_mutex_lock(&border->mutex);
-  if (border->too_small
+  if (border->is_being_destroyed
+      || border->too_small
       || border->external_proxy_wid
       || (!border->sticky && !is_space_visible(border->cid, border->sid))) {
     pthread_mutex_unlock(&border->mutex);

@@ -70,7 +70,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   } else if (event == EVENT_WINDOW_REORDER) {
     debug("Window Reorder (and focus): %d\n", wid);
     windows_window_update(windows, wid);
-    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(10000, {
+    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(5000, {
       windows_determine_and_focus_active_window(windows);
     });
   } else if (event == EVENT_WINDOW_LEVEL) {
@@ -78,7 +78,7 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
     debug("Window Focus\n");
-    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
+    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(20000, {
       windows_determine_and_focus_active_window(windows);
     });
   } else if (event == EVENT_WINDOW_UNHIDE) {
@@ -95,14 +95,14 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 
 static void front_app_handler() {
   debug("Window Focus\n");
-  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
+  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(16000, {
     windows_determine_and_focus_active_window(&g_windows);
   });
 }
 
 static void space_handler() {
   // Not all native-fullscreen windows have yet updated their space id...
-  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(20000, {
+  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(10000, {
     windows_draw_borders_on_current_spaces(&g_windows);
   });
 }

@@ -374,3 +374,26 @@ void windows_add_existing_windows(struct table* windows) {
   CFRelease(space_list_ref);
   free(space_list);
 }
+
+void windows_sync_alpha(struct table* windows) {
+  int cid = SLSMainConnectionID();
+  for (int i = 0; i < windows->capacity; i++) {
+    struct bucket* bucket = windows->buckets[i];
+    while (bucket) {
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        pthread_mutex_lock(&border->mutex);
+        if (!border->is_being_destroyed && border->wid && border->target_wid) {
+          float target_alpha = 1.0f;
+          CGError err = SLSGetWindowAlpha(cid, border->target_wid, &target_alpha);
+          if (err == kCGErrorSuccess) {
+            // Sync border alpha with target window alpha
+            SLSSetWindowAlpha(border->cid, border->wid, target_alpha);
+          }
+        }
+        pthread_mutex_unlock(&border->mutex);
+      }
+      bucket = bucket->next;
+    }
+  }
+}

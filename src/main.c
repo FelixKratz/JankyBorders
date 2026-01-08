@@ -229,6 +229,15 @@ int main(int argc, char** argv) {
   mach_server_begin(&g_mach_server, message_handler);
   if (!update_mask) execute_config_file("borders", "bordersrc");
 
+  // Alpha sync timer - runs every 16ms (~60fps) to sync border alpha with target window
+  dispatch_queue_t alpha_queue = dispatch_queue_create("com.borders.alpha_sync", DISPATCH_QUEUE_SERIAL);
+  dispatch_source_t alpha_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, alpha_queue);
+  dispatch_source_set_timer(alpha_timer, dispatch_time(DISPATCH_TIME_NOW, 0), 16 * NSEC_PER_MSEC, 1 * NSEC_PER_MSEC);
+  dispatch_source_set_event_handler(alpha_timer, ^{
+    windows_sync_alpha(&g_windows);
+  });
+  dispatch_resume(alpha_timer);
+
   #ifdef _YABAI_INTEGRATION
   yabai_register_mach_port(&g_windows);
   #endif

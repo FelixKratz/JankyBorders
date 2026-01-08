@@ -86,6 +86,7 @@ struct border {
   bool is_proxy;
   struct border* proxy;
   volatile uint32_t external_proxy_wid;
+  volatile bool is_being_destroyed;
 
   struct settings setting_override;
 };

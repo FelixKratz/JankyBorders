@@ -29,6 +29,7 @@ extern CGError SLSSetWindowShape(int cid, uint32_t wid, float x_offset, float y_
 extern CGError SLSSetWindowResolution(int cid, uint32_t wid, double res);
 extern CGError SLSSetWindowOpacity(int cid, uint32_t wid, bool isOpaque);
 extern CGError SLSSetWindowAlpha(int cid, uint32_t wid, float alpha);
+extern CGError SLSGetWindowAlpha(int cid, uint32_t wid, float* out_alpha);
 extern CGError SLSSetWindowBackgroundBlurRadius(int cid, uint32_t wid, uint32_t radius);
 extern CGError SLSSetWindowShadowParameters(int cid, uint32_t wid, float std, float density, int x_offset, int y_offset);
 extern CGError SLSGetWindowTransform(int cid, uint32_t wid, CGAffineTransform* transform);

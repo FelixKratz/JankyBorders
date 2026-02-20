@@ -10,6 +10,13 @@
 #define WINDOW_TAG_IGNORES_CYCLE (1ULL << 18)
 #define WINDOW_TAG_MODAL         (1ULL << 31)
 
+static inline bool window_is_valid(uint32_t wid) {
+  int cid = SLSMainConnectionID();
+  int wid_cid = 0;
+  CGError err = SLSGetWindowOwner(cid, wid, &wid_cid);
+  return err == kCGErrorSuccess;
+}
+
 static inline bool window_suitable(CFTypeRef iterator) {
   uint64_t tags = SLSWindowIteratorGetTags(iterator);
   uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);

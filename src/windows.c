@@ -307,6 +307,25 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
   CFRelease(space_list_ref);
 }
 
+void windows_cleanup_orphaned_borders(struct table* windows) {
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
+    while (bucket) {
+      struct bucket* next = bucket->next;
+      if (bucket->value) {
+        struct border* border = bucket->value;
+        if (!window_is_valid(border->target_wid)) {
+          debug("Cleaning up orphaned border for window: %d\n",
+                border->target_wid);
+          table_remove(windows, &border->target_wid);
+          border_destroy(border);
+        }
+      }
+      bucket = next;
+    }
+  }
+}
+
 void windows_add_existing_windows(struct table* windows) {
   int cid = SLSMainConnectionID();
   uint64_t* space_list = NULL;

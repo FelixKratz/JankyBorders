@@ -84,6 +84,7 @@ struct border {
   struct event_buffer event_buffer;
 
   bool is_proxy;
+  volatile bool is_destroyed;
   struct border* proxy;
   volatile uint32_t external_proxy_wid;
 

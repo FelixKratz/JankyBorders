@@ -112,6 +112,12 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
     gradient = drawing_create_gradient(&color_style.gradient,
                                        trans,
                                        gradient_dir          );
+    if (!gradient) {
+      color_style.stype = COLOR_STYLE_SOLID;
+      drawing_set_stroke_and_fill(border->context,
+                                  color_style.gradient.color1,
+                                  false                       );
+    }
   }
 
   CGContextSetLineWidth(border->context, settings->border_width);
@@ -176,7 +182,7 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                                                corner_radius  );
     }
   }
-  CGGradientRelease(gradient);
+  if (gradient) CGGradientRelease(gradient);
 
   if (settings->show_background && settings->border_order != 1) {
     CGContextRestoreGState(border->context);

@@ -3,6 +3,7 @@
 #include "windows.h"
 #include "border.h"
 #include "misc/window.h"
+#include <string.h>
 
 extern struct table g_windows;
 extern pid_t g_pid;
@@ -35,10 +36,15 @@ static bool is_own_window(int cid, uint32_t wid) {
   return pid == g_pid;
 }
 
-static void window_spawn_handler(uint32_t event, struct window_spawn_data* data, size_t _, int cid) {
+static void window_spawn_handler(uint32_t event, void* data, size_t data_length, int cid) {
+  if (data_length < sizeof(struct window_spawn_data)) return;
+
+  struct window_spawn_data spawn_data;
+  memcpy(&spawn_data, data, sizeof(spawn_data));
+
   struct table* windows = &g_windows;
-  uint32_t wid = data->wid;
-  uint64_t sid = data->sid;
+  uint32_t wid = spawn_data.wid;
+  uint64_t sid = spawn_data.sid;
 
   if (!wid || !sid || is_own_window(cid, wid)) return;
 

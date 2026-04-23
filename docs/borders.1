@@ -56,6 +56,14 @@ Determines the width of the border.\& For example, width=5.\&0 creates a border
 If set to \fIon\fR, the border will be drawn with retina resolution.\&
 .PP
 .RE
+\fBactive_only=<boolean>\fR
+.RS 4
+If set to \fIon\fR, only the focused window receives a border.\& This reduces
+the number of backing surfaces kept alive and can lower memory usage.\&
+Since inactive borders are not kept alive in this mode, \fIinactive_color\fR
+has no visible effect.\&
+.PP
+.RE
 \fBax_focus=<boolean>\fR
 .RS 4
 If set to \fIon\fR, the (slower) accessibility API is used to resolve the

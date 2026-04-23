@@ -2,6 +2,7 @@
 #include "misc/extern.h"
 #include "windows.h"
 #include "border.h"
+#include "misc/ax.h"
 #include "misc/window.h"
 
 extern struct table g_windows;
@@ -108,7 +109,15 @@ static void front_app_handler() {
 
 static void space_handler() {
   if (g_settings.active_only) {
-    windows_draw_borders_on_current_spaces(&g_windows);
+    int cid = SLSMainConnectionID();
+    uint32_t front_wid = g_settings.ax_focus
+                         ? ax_get_front_window(cid)
+                         : get_front_window(cid);
+
+    if (front_wid
+        && window_space_id(cid, front_wid) == get_active_space_id(cid)) {
+      windows_draw_borders_on_current_spaces(&g_windows);
+    }
   }
 
   // Not all native-fullscreen windows have yet updated their space id...

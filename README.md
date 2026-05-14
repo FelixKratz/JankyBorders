@@ -77,3 +77,28 @@ the already running instance.
 ## Documentation
 Local documentation is available as `man borders` and as a rendered version in
 the [Wiki](https://github.com/FelixKratz/JankyBorders/wiki/Man-Page).
+
+## Troubleshooting
+
+### CF_BRIDGED_MUTABLE_TYPE(NSMutableString) __CFString * CFMutableStringRef
+
+```bash
+In file included from src/animation.c:1:
+In file included from src/animation.h:2:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreVideo.framework/Headers/CoreVideo.h:29:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreVideo.framework/Headers/CVPixelBuffer.h:23:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreVideo.framework/Headers/CVImageBuffer.h:29:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/ApplicationServices.framework/Headers/ApplicationServices.h:39:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreText.framework/Headers/CoreText.h:26:
+/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreText.framework/Headers/CTFramesetter.h:85:5: error: unknown type name 'CFAttributedStringRef'; did you mean 'CFMutableStringRef'?
+    CFAttributedStringRef attrString ) CT_AVAILABLE(macos(10.5), ios(3.2), watchos(2.0), tvos(9.0));
+    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFBase.h:510:70: note: 'CFMutableStringRef' declared here
+typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableString) __CFString * CFMutableStringRef;
+                                                                     ^
+4 errors generated.
+make: *** [all] Error 1
+```
+
+To solve this issue ensure `which clang` returns `/usr/bin/clang`.
+- Uninstall `llvm` via `brew uninstall llvm`

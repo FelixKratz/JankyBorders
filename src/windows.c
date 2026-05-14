@@ -39,7 +39,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
-  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
+  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer) || g_settings.border_style == BORDER_STYLE_NONE) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),
@@ -373,4 +373,6 @@ void windows_add_existing_windows(struct table* windows) {
   }
   CFRelease(space_list_ref);
   free(space_list);
+
+  windows_determine_and_focus_active_window(windows);
 }

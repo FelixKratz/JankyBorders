@@ -26,7 +26,7 @@ API, thereby being faster than comparable tools.\&
 .PP
 \fBstyle=<style>\fR
 .RS 4
-Specifies the style of the border (either \fIround\fR or \fIsquare\fR)
+Specifies the style of the border (either \fIround\fR, \fIsquare\fR or \fIuniform\fR)
 .PP
 .RE
 \fBactive_color=<color>\fR
@@ -107,13 +107,13 @@ A color formatted as \fI0xAARRGGBB\fR, where \fIA\fR is the alpha channel, \fIR\
 red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All
 constituents take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .PP
-The color argument can take the special values: 
+The color argument can take the special values:
 .br
-	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR 
+	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR
 .br
-	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
+	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR
 .br
-	\fIglow(0xAARRGGBB)\fR 
+	\fIglow(0xAARRGGBB)\fR
 .br
 (You might need to quote these arguments depending on your shell)
 .PP

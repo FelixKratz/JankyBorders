@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.ref_name }}-ci
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-26
+          - arch: x86_64
+            runner: macos-26-intel
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build borders
+        run: make all
+
+      - name: Verify binary
+        run: |
+          test -x bin/borders
+          lipo -info bin/borders
+          vtool -show-build bin/borders
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: borders-macos-${{ matrix.arch }}
+          path: bin/borders
+          if-no-files-found: error
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.ref_type == 'tag'
+        run: |
+          gh release create ${{ github.ref_name }} --generate-notes
+
+      - name: Upload release asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.ref_type == 'tag'
+        run: |
+          tar -czf borders-macos-${{ matrix.arch }}.tar.gz bin/borders docs/borders.1
+          gh release upload ${{ github.ref_name }} borders-macos-${{ matrix.arch }}.tar.gz --clobber
+
+      - name: Update Homebrew formula
+        uses: dawidd6/action-homebrew-bump-formula@v7
+        if: github.ref_type == 'tag'
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          tap: FelixKratz/homebrew-formulae
+          formula: borders

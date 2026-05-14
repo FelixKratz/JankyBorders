@@ -1,9 +1,11 @@
 #include "windows.h"
 #include "hashtable.h"
 #include "border.h"
+#include "misc/app_rules.h"
 #include "misc/ax.h"
 #include <string.h>
 #include <libproc.h>
+#include <stdlib.h>
 
 extern pid_t g_pid;
 extern struct settings g_settings;
@@ -11,20 +13,102 @@ extern struct settings g_settings;
 // Loaded via dlsym in main.c
 extern CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
 
-static bool window_in_list(struct table* list, char* app_name) {
-  if (table_find(list, app_name)) return true;
-  return false;
+static char* copy_string_from_cfstring(CFStringRef value) {
+  if (!value || CFGetTypeID(value) != CFStringGetTypeID()) return NULL;
+  CFIndex length = CFStringGetLength(value);
+  CFIndex max_size = CFStringGetMaximumSizeForEncoding(length,
+                                                       kCFStringEncodingUTF8);
+  char* buffer = malloc((max_size + 1) * sizeof(char));
+  if (!buffer) return NULL;
+  if (!CFStringGetCString(value, buffer, max_size + 1, kCFStringEncodingUTF8)) {
+    free(buffer);
+    return NULL;
+  }
+  return buffer;
 }
 
-static bool app_allowed(struct settings* settings, char* app_name) {
-  if (settings->whitelist_enabled
-      && !window_in_list(&settings->whitelist, app_name)) {
-    return false;
+static char* window_title_from_ax(uint32_t wid, pid_t pid) {
+  if (!ax_check_trust(true)) return NULL;
+  AXUIElementRef app = AXUIElementCreateApplication(pid);
+  if (!app) return NULL;
+
+  CFArrayRef window_list = NULL;
+  AXError error = AXUIElementCopyAttributeValue(app,
+                                                kAXWindowsAttribute,
+                                                (CFTypeRef*)&window_list);
+  if (error != kAXErrorSuccess || !window_list) {
+    if (app) CFRelease(app);
+    return NULL;
   }
-  if (settings->blacklist_enabled
-      && window_in_list(&settings->blacklist, app_name)) {
-    return false;
+
+  char* title = NULL;
+  CFIndex count = CFArrayGetCount(window_list);
+  for (CFIndex i = 0; i < count; ++i) {
+    AXUIElementRef window = CFArrayGetValueAtIndex(window_list, i);
+    if (!window) continue;
+
+    uint32_t window_id = 0;
+    _AXUIElementGetWindow(window, &window_id);
+    if (window_id != wid) continue;
+
+    CFStringRef title_ref = NULL;
+    AXError title_error = AXUIElementCopyAttributeValue(window,
+                                                        kAXTitleAttribute,
+                                                        (CFTypeRef*)&title_ref);
+    if (title_error == kAXErrorSuccess && title_ref) {
+      title = copy_string_from_cfstring(title_ref);
+      CFRelease(title_ref);
+      break;
+    }
+    if (title_ref) CFRelease(title_ref);
   }
+
+  if (window_list) CFRelease(window_list);
+  CFRelease(app);
+
+  return title;
+}
+
+static char* window_copy_title(uint32_t wid, pid_t pid) {
+  return window_title_from_ax(wid, pid);
+}
+
+static bool app_allowed(struct settings* settings,
+                        char* app_name,
+                        uint32_t wid,
+                        pid_t pid) {
+  char* title = NULL;
+
+  if (settings->whitelist_enabled) {
+    struct app_rule* whitelist_rule = table_find(&settings->whitelist,
+                                                 app_name);
+    if (!whitelist_rule) return false;
+    if (!whitelist_rule->match_all_windows) {
+      title = window_copy_title(wid, pid);
+      if (!app_rule_matches(whitelist_rule, title ? title : "")) {
+        if (title) free(title);
+        return false;
+      }
+    }
+  }
+
+  if (settings->blacklist_enabled) {
+    struct app_rule* blacklist_rule = table_find(&settings->blacklist,
+                                                 app_name);
+    if (blacklist_rule) {
+      const char* window_title = NULL;
+      if (!blacklist_rule->match_all_windows) {
+        if (!title) title = window_copy_title(wid, pid);
+        window_title = title ? title : "";
+      }
+      if (app_rule_matches(blacklist_rule, window_title)) {
+        if (title) free(title);
+        return false;
+      }
+    }
+  }
+
+  if (title) free(title);
   return true;
 }
 
@@ -39,7 +123,8 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
-  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
+  if (pid == g_pid
+      || !app_allowed(&g_settings, pid_name_buffer, wid, pid)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),

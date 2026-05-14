@@ -66,15 +66,26 @@ modifying window properties on a system level (e.\&g.\& yabai).\&
 .RE
 \fBblacklist=<application_list>\fR
 .RS 4
-The applications specified here are excluded from being bordered.\& For
-example, blacklist="Safari,kitty" excludes Safari and kitty from being
-bordered.\&
+The applications specified here are excluded from being bordered.\&
+Each entry starts with the application name and may optionally append
+\fC:<regex>\fR to match specific window titles using POSIX extended
+regular expressions.\& Rules without a regex exclude every window of the
+application, while multiple rules for the same app can be supplied to
+target different titles.\& For example,
+blacklist="Safari,kitty:^Scratch$,kitty:^Terminus$" excludes all Safari
+windows and kitty windows whose titles match either expression.\&
 .PP
 .RE
 \fBwhitelist=<application_list>\fR
 .RS 4
-Once this list is populated, only applications listed here are considered
-for receiving a border.\& If the whitelist is empty (default) it is inactive.\&
+Once this list is populated, only windows that match at least one rule are
+considered for a border.\& The format mirrors \fBblacklist\fR: each entry begins
+with the application name and may append \fC:<regex>\fR to target specific
+window titles.\& Rules without a regex allow every window from that
+application, while additional rules can refine allowed titles.\& For example,
+whitelist="Safari,kitty:^Work" draws borders for all Safari windows and kitty
+windows whose titles start with "Work".\& The blacklist is evaluated afterwards
+and can still be used to exclude subsets.\&
 .PP
 .RE
 If an instance of \fBborders\fR is already running, subsequent invocations will
@@ -107,21 +118,22 @@ A color formatted as \fI0xAARRGGBB\fR, where \fIA\fR is the alpha channel, \fIR\
 red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All
 constituents take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .PP
-The color argument can take the special values: 
+The color argument can take the special values:
 .br
-	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR 
+	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR
 .br
-	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
+	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR
 .br
-	\fIglow(0xAARRGGBB)\fR 
+	\fIglow(0xAARRGGBB)\fR
 .br
 (You might need to quote these arguments depending on your shell)
 .PP
 .RE
 \fB<application_list>\fR
 .RS 4
-A comma separated list of application names.\& This argument should be
-quoted.\&
+A comma separated list of application rules.\& Each rule starts with an
+application name and may optionally append \fC:<regex>\fR to match window
+titles.\& This argument should be quoted.\&
 .PP
 .RE
 .SH BUGS

@@ -44,13 +44,24 @@ API, thereby being faster than comparable tools.
 	modifying window properties on a system level (e.g. yabai).
 
 *blacklist=<application_list>*
-	The applications specified here are excluded from being bordered. For
-	example, blacklist="Safari,kitty" excludes Safari and kitty from being
-	bordered.
+	The applications specified here are excluded from being bordered. Each
+	entry starts with the application name and may optionally append
+	`:<regex>` to match specific window titles using POSIX extended regular
+	expressions. Rules without a regex exclude every window of the
+	application, while multiple rules for the same app can be supplied to
+	target different titles. For example,
+	blacklist="Safari,kitty:^Scratch$,kitty:^Terminus$" excludes all Safari
+	windows and kitty windows whose titles match either expression.
 
 *whitelist=<application_list>*
-	Once this list is populated, only applications listed here are considered
-	for receiving a border. If the whitelist is empty (default) it is inactive.
+	Once this list is populated, only windows that match at least one rule are
+	considered for a border. The format mirrors *blacklist*: each entry begins
+	with the application name and may append `:<regex>` to target specific
+	window titles. Rules without a regex allow every window from that
+	application, while additional rules can refine allowed titles. For
+	example, whitelist="Safari,kitty:^Work" draws borders for all Safari
+	windows and kitty windows whose titles start with "Work". The blacklist
+	is evaluated afterwards and can still be used to exclude subsets.
 
 If an instance of *borders* is already running, subsequent invocations will
 update the existing process with the new arguments.
@@ -82,8 +93,9 @@ could be issued.
 (You might need to quote these arguments depending on your shell)
 
 *<application_list>*
-	A comma separated list of application names. This argument should be
-	quoted.
+	A comma separated list of application rules. Each rule starts with an
+	application name and may optionally append `:<regex>` to match window
+	titles. This argument should be quoted.
 
 # BUGS
 

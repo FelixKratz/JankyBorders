@@ -37,6 +37,12 @@ API, thereby being faster than comparable tools.
 *hidpi=<boolean>*
 	If set to _on_, the border will be drawn with retina resolution.
 
+*active_only=<boolean>*
+	If set to _on_, only the focused window receives a border. This reduces
+	the number of backing surfaces kept alive and can lower memory usage.
+	Since inactive borders are not kept alive in this mode, _inactive_color_
+	has no visible effect.
+
 *ax_focus=<boolean>*
 	If set to _on_, the (slower) accessibility API is used to resolve the
 	focused window. Enabled automatically if the (parent) process has

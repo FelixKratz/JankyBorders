@@ -61,6 +61,7 @@ An example configuration file could look like this:
 options=(
 	style=round
 	width=6.0
+	active_only=off
 	hidpi=off
 	active_color=0xffe2e2e3
 	inactive_color=0xff414550

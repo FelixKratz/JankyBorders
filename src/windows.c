@@ -28,6 +28,51 @@ static bool app_allowed(struct settings* settings, char* app_name) {
   return true;
 }
 
+static uint32_t windows_active_window_id(int cid) {
+  return g_settings.ax_focus ? ax_get_front_window(cid) : get_front_window(cid);
+}
+
+static struct border* windows_detach_first_border(struct table* windows) {
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
+    if (bucket) {
+      struct border* border = bucket->value;
+      windows->buckets[i] = bucket->next;
+      free(bucket->key);
+      free(bucket);
+      --windows->count;
+      return border;
+    }
+  }
+
+  return NULL;
+}
+
+static void windows_remove_all_except(struct table* windows, uint32_t wid) {
+  bool removed_window = false;
+
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket** bucket = &windows->buckets[i];
+    while (*bucket) {
+      struct bucket* current = *bucket;
+      struct border* border = current->value;
+
+      if (border && border->target_wid != wid) {
+        *bucket = current->next;
+        free(current->key);
+        free(current);
+        --windows->count;
+        border_destroy(border);
+        removed_window = true;
+      } else {
+        bucket = &current->next;
+      }
+    }
+  }
+
+  if (removed_window) windows_update_notifications(windows);
+}
+
 bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   bool window_created = false;
   int cid = SLSMainConnectionID();
@@ -40,6 +85,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
   if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
+  if (g_settings.active_only && wid != windows_active_window_id(cid)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),
@@ -56,7 +102,21 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
         if (window_suitable(iterator)) {
           struct border* border = table_find(windows, &wid);
           if (!border) {
-            border = border_create();
+            border = g_settings.active_only
+                     ? windows_detach_first_border(windows)
+                     : NULL;
+            if (border) {
+              if (border->proxy) {
+                border_destroy(border->proxy);
+                border->proxy = NULL;
+              }
+              border->setting_override.enabled = false;
+              border->external_proxy_wid = 0;
+              border->focused = false;
+              border->needs_redraw = true;
+            } else {
+              border = border_create();
+            }
             table_add(windows, &wid, border);
             window_created = true;
           }
@@ -78,6 +138,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
           border->inner_radius = radius + 1;
           border->target_wid = wid;
           border->sid = sid;
+          if (g_settings.active_only) border->focused = true;
           border_update(border, false);
           windows_update_notifications(windows);
         }
@@ -173,8 +234,10 @@ static bool windows_window_focus(struct table* windows, uint32_t wid) {
         struct border* border = bucket->value;
         if (border->focused && border->target_wid != wid) {
           border->focused = false;
-          border->needs_redraw = true;
-          border_update(border, true);
+          if (!g_settings.active_only) {
+            border->needs_redraw = true;
+            border_update(border, true);
+          }
         }
 
         if (!border->focused && border->target_wid == wid) {
@@ -227,7 +290,7 @@ void windows_update_notifications(struct table* windows) {
     while (bucket) {
       if (bucket->value) {
         uint32_t wid = *(uint32_t *) bucket->key;
-        window_list[window_count++] = wid;
+        if (window_count < 1024) window_list[window_count++] = wid;
       }
       bucket = bucket->next;
     }
@@ -239,9 +302,7 @@ void windows_update_notifications(struct table* windows) {
 
 void windows_determine_and_focus_active_window(struct table* windows) {
   int cid = SLSMainConnectionID();
-  uint32_t front_wid = g_settings.ax_focus
-                       ? ax_get_front_window(cid)
-                       : get_front_window(cid);
+  uint32_t front_wid = windows_active_window_id(cid);
 
   debug("Front window: %d\n", front_wid);
   if (!windows_window_focus(windows, front_wid)) {
@@ -252,11 +313,18 @@ void windows_determine_and_focus_active_window(struct table* windows) {
       windows_window_focus(windows, front_wid);
     }
   }
+  if (g_settings.active_only) windows_remove_all_except(windows, front_wid);
 }
 
 void windows_draw_borders_on_current_spaces(struct table* windows) {
   debug("Space Change: Consistency check\n");
   int cid = SLSMainConnectionID();
+
+  if (g_settings.active_only) {
+    windows_determine_and_focus_active_window(windows);
+    return;
+  }
+
   CFArrayRef displays = SLSCopyManagedDisplays(cid);
   uint32_t space_count = CFArrayGetCount(displays);
   uint64_t space_list[space_count];
@@ -309,6 +377,12 @@ void windows_draw_borders_on_current_spaces(struct table* windows) {
 
 void windows_add_existing_windows(struct table* windows) {
   int cid = SLSMainConnectionID();
+
+  if (g_settings.active_only) {
+    windows_determine_and_focus_active_window(windows);
+    return;
+  }
+
   uint64_t* space_list = NULL;
   int space_count = 0;
 

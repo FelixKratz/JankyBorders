@@ -11,6 +11,10 @@ asan: | bin
 	clang -std=c99 -Wall -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -g $(FILES) -o bin/debug $(LIBS)
 	./bin/debug
 
+test:
+	clang -std=c99 -O0 -g -ffunction-sections tests/color_style_test.c src/hashtable.c -Wl,-dead_strip $(LIBS) -o /tmp/jankyborders-color-style-test
+	/tmp/jankyborders-color-style-test
+
 bin:
 	mkdir bin
 

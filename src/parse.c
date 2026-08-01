@@ -28,32 +28,71 @@ static bool parse_list(struct table* list, char* token) {
   return entry_found;
 }
 
-static bool parse_color(struct color_style* style, char* token) {
-  if (sscanf(token, "=0x%x", &style->color) == 1) {
-    style->stype = COLOR_STYLE_SOLID;
+static bool parse_gradient(struct color_style* style,
+                           const char* token,
+                           const char* format,
+                           int direction,
+                           bool glow) {
+  uint32_t color1;
+  uint32_t color2;
+  int consumed = 0;
+  if (sscanf(token, format, &color1, &color2, &consumed) != 2
+      || consumed != (int)strlen(token)) {
+    return false;
+  }
+
+  style->stype = COLOR_STYLE_GRADIENT;
+  style->glow = glow;
+  style->gradient.direction = direction;
+  style->gradient.color1 = color1;
+  style->gradient.color2 = color2;
+  return true;
+}
+
+static bool parse_solid(struct color_style* style,
+                        const char* token,
+                        const char* format,
+                        bool glow) {
+  uint32_t color;
+  int consumed = 0;
+  if (sscanf(token, format, &color, &consumed) != 1
+      || consumed != (int)strlen(token)) {
+    return false;
+  }
+
+  style->stype = COLOR_STYLE_SOLID;
+  style->glow = glow;
+  style->color = color;
+  return true;
+}
+
+static bool parse_color(struct color_style* style, const char* token) {
+  if (parse_gradient(style,
+                     token,
+                     "=glow(gradient(top_left=0x%x,bottom_right=0x%x))%n",
+                     TL_TO_BR,
+                     true)
+      || parse_gradient(style,
+                        token,
+                        "=glow(gradient(top_right=0x%x,bottom_left=0x%x))%n",
+                        TR_TO_BL,
+                        true)
+      || parse_gradient(style,
+                        token,
+                        "=gradient(top_left=0x%x,bottom_right=0x%x)%n",
+                        TL_TO_BR,
+                        false)
+      || parse_gradient(style,
+                        token,
+                        "=gradient(top_right=0x%x,bottom_left=0x%x)%n",
+                        TR_TO_BL,
+                        false)
+      || parse_solid(style, token, "=glow(0x%x)%n", true)
+      || parse_solid(style, token, "=0x%x%n", false)) {
     return true;
   }
-  else if (sscanf(token, "=glow(0x%x)", &style->color) == 1) {
-    style->stype = COLOR_STYLE_GLOW;
-    return true;
-  }
-  else if (sscanf(token,
-             "=gradient(top_left=0x%x,bottom_right=0x%x)",
-             &style->gradient.color1,
-             &style->gradient.color2) == 2) {
-    style->stype = COLOR_STYLE_GRADIENT;
-    style->gradient.direction = TL_TO_BR;
-    return true;
-  }
-  else if (sscanf(token,
-             "=gradient(top_right=0x%x,bottom_left=0x%x)",
-             &style->gradient.color1,
-             &style->gradient.color2) == 2) {
-    style->stype = COLOR_STYLE_GRADIENT;
-    style->gradient.direction = TR_TO_BL;
-    return true;
-  }
-  else printf("[?] Borders: Invalid color argument color%s\n", token);
+
+  printf("[?] Borders: Invalid color argument color%s\n", token);
 
   return false;
 }
@@ -81,10 +120,15 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       }
     }
     else if (str_starts_with(arguments[i], background_color)) {
-      if (parse_color(&settings->background,
-                                 arguments[i] + strlen(background_color))) {
-        update_mask |= BORDER_UPDATE_MASK_ALL;
-        settings->show_background = settings->background.color & 0xff000000;
+      struct color_style bg;
+      if (parse_color(&bg, arguments[i] + strlen(background_color))) {
+        if (bg.stype == COLOR_STYLE_GRADIENT) {
+          printf("[?] Borders: background_color does not support gradients\n");
+        } else {
+          settings->background = bg;
+          update_mask |= BORDER_UPDATE_MASK_ALL;
+          settings->show_background = settings->background.color & 0xff000000;
+        }
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {

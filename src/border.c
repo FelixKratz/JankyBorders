@@ -55,6 +55,51 @@ static bool border_calculate_bounds(struct border* border, CGRect* frame, struct
   return true;
 }
 
+static void border_add_gradient_glow_path(CGContextRef context,
+                                          CGRect path_rect,
+                                          float inset,
+                                          float corner_radius,
+                                          bool square) {
+  if (square) drawing_add_rect_with_inset(context, path_rect, inset);
+  else drawing_add_rounded_rect(context, path_rect, corner_radius);
+}
+
+static void border_draw_gradient_glow(CGContextRef context,
+                                      const struct gradient* gradient,
+                                      CGRect path_rect,
+                                      float inset,
+                                      float corner_radius,
+                                      float blur_radius,
+                                      bool square) {
+  float a, r, g, b;
+  colors_mix(gradient->color1, gradient->color2, &a, &r, &g, &b);
+  CGColorRef glow_color = CGColorCreateGenericRGB(r, g, b, a);
+
+  CGContextSaveGState(context);
+  CGContextSetShadowWithColor(context, CGSizeZero, blur_radius, glow_color);
+  CGColorRelease(glow_color);
+  CGContextSetRGBFillColor(context, 1.0f, 1.0f, 1.0f, 1.0f);
+  CGContextSetRGBStrokeColor(context, 1.0f, 1.0f, 1.0f, 1.0f);
+  border_add_gradient_glow_path(context,
+                                path_rect,
+                                inset,
+                                corner_radius,
+                                square       );
+  if (square) CGContextFillPath(context);
+  else CGContextStrokePath(context);
+
+  CGContextSetShadowWithColor(context, CGSizeZero, 0, NULL);
+  CGContextSetBlendMode(context, kCGBlendModeDestinationOut);
+  border_add_gradient_glow_path(context,
+                                path_rect,
+                                inset,
+                                corner_radius,
+                                square       );
+  if (square) CGContextFillPath(context);
+  else CGContextStrokePath(context);
+  CGContextRestoreGState(context);
+}
+
 static void border_draw(struct border* border, CGRect frame, struct settings* settings) {
   CGContextSaveGState(border->context);
   border->needs_redraw = false;
@@ -64,10 +109,8 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
 
   CGGradientRef gradient = NULL;
   CGPoint gradient_dir[2];
-  if (color_style.stype == COLOR_STYLE_SOLID
-     || color_style.stype == COLOR_STYLE_GLOW) {
-    bool glow = color_style.stype == COLOR_STYLE_GLOW;
-    drawing_set_stroke_and_fill(border->context, color_style.color, glow);
+  if (color_style.stype == COLOR_STYLE_SOLID) {
+    drawing_set_stroke_and_fill(border->context, color_style.color, color_style.glow);
   } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
     CGAffineTransform trans = CGAffineTransformMakeScale(frame.size.width,
                                                          frame.size.height);
@@ -81,9 +124,10 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
 
   CGRect path_rect = border->drawing_bounds;
   CGMutablePathRef inner_clip_path = CGPathCreateMutable();
-  if (settings->border_style == BORDER_STYLE_SQUARE
-      && settings->border_order == BORDER_ORDER_ABOVE
-      && settings->border_width >= BORDER_TSMW) {
+  bool square_thick_above = settings->border_style == BORDER_STYLE_SQUARE
+                            && settings->border_order == BORDER_ORDER_ABOVE
+                            && settings->border_width >= BORDER_TSMW;
+  if (square_thick_above) {
     // Inset the frame to overlap the rounding of macOS windows to create a
     // truly square border
     path_rect = CGRectInset(border->drawing_bounds,
@@ -100,52 +144,65 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
   }
   drawing_clip_between_rect_and_path(border->context, frame, inner_clip_path);
 
-  if (settings->border_style == BORDER_STYLE_SQUARE) {
-    if (color_style.stype == COLOR_STYLE_SOLID
-       || color_style.stype == COLOR_STYLE_GLOW) {
+  bool square = settings->border_style == BORDER_STYLE_SQUARE;
+  float inset = -settings->border_width / 2.f;
+  float corner_radius = settings->border_style == BORDER_STYLE_ROUND_UNIFORM
+                        ? 9.0
+                        : border->radius;
+
+  if (settings->border_style == BORDER_STYLE_ROUND_UNIFORM) {
+    drawing_draw_rounded_rect_with_inset(border->context,
+                                         path_rect,
+                                         corner_radius,
+                                         true            );
+  }
+
+  if (color_style.stype == COLOR_STYLE_SOLID) {
+    if (square) {
       drawing_draw_square_with_inset(border->context,
                                      path_rect,
-                                     -settings->border_width / 2.f);
-    }
-    else if (color_style.stype == COLOR_STYLE_GRADIENT) {
-      drawing_draw_square_gradient_with_inset(border->context,
-                                              gradient,
-                                              gradient_dir,
-                                              path_rect,
-                                              -settings->border_width / 2.f);
-    }
-  } else {
-    float corner_radius = settings->border_style == BORDER_STYLE_ROUND_UNIFORM ? 9.0 : border->radius;
-
-    if (settings->border_style == BORDER_STYLE_ROUND_UNIFORM) {
-      drawing_draw_rounded_rect_with_inset(border->context,
-                                           path_rect,
-                                           corner_radius,
-                                           true            );
-    }
-
-    if (color_style.stype == COLOR_STYLE_SOLID
-       || color_style.stype == COLOR_STYLE_GLOW) {
+                                     inset    );
+    } else {
       drawing_draw_rounded_rect_with_inset(border->context,
                                            path_rect,
                                            corner_radius,
                                            false           );
-    } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+    }
+  } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+    if (color_style.glow) {
+      float blur_radius = square_thick_above ? BORDER_TSMN : 10.0f;
+      border_draw_gradient_glow(border->context,
+                                &color_style.gradient,
+                                path_rect,
+                                inset,
+                                corner_radius,
+                                blur_radius,
+                                square               );
+    }
+
+    CGContextSaveGState(border->context);
+    if (square) {
+      drawing_draw_square_gradient_with_inset(border->context,
+                                              gradient,
+                                              gradient_dir,
+                                              path_rect,
+                                              inset       );
+    } else {
       drawing_draw_rounded_gradient_with_inset(border->context,
                                                gradient,
                                                gradient_dir,
                                                path_rect,
                                                corner_radius  );
     }
+    CGContextRestoreGState(border->context);
   }
-  CGGradientRelease(gradient);
+  if (gradient) CGGradientRelease(gradient);
 
   if (settings->show_background && settings->border_order != 1) {
     CGContextRestoreGState(border->context);
     CGContextSaveGState(border->context);
     color_style = settings->background;
-    if (color_style.stype == COLOR_STYLE_SOLID
-       || color_style.stype == COLOR_STYLE_GLOW) {
+    if (color_style.stype == COLOR_STYLE_SOLID) {
       drawing_draw_filled_path(border->context,
                                inner_clip_path,
                                color_style.color);

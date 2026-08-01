@@ -109,13 +109,20 @@ constituents take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .PP
 The color argument can take the special values: 
 .br
-	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR 
+	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR
 .br
-	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
+	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR
 .br
-	\fIglow(0xAARRGGBB)\fR 
+	\fIglow(0xAARRGGBB)\fR
+.br
+	\fIglow(gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB))\fR
+.br
+	\fIglow(gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB))\fR
 .br
 (You might need to quote these arguments depending on your shell)
+.PP
+The glow color for a gradient is the alpha-weighted blend of its two
+endpoint colors.\&
 .PP
 .RE
 \fB<application_list>\fR

@@ -257,19 +257,6 @@ void border_update_internal(struct border* border, struct settings* settings) {
   if (disabled_update) SLSReenableUpdate(cid);
 }
 
-static void* border_update_async_proc(void* context) {
-  struct {
-    struct border* border;
-    struct settings settings;
-  }* payload = context;
-
-  pthread_mutex_lock(&payload->border->mutex);
-  border_update_internal(payload->border, &payload->settings);
-  pthread_mutex_unlock(&payload->border->mutex);
-  free(payload);
-  return NULL;
-}
-
 void border_init(struct border* border, int cid) {
   memset(border, 0, sizeof(struct border));
   pthread_mutexattr_t mattr;
@@ -335,31 +322,41 @@ void border_move(struct border* border) {
   });
 }
 
+// Adaptive debounce: a space change triggers a burst of events (unhide, level,
+// reorder, focus) that each cause a redraw and visible flicker, so during a
+// space transition (see border_space_change_begin) collapse bursts with a long
+// debounce; otherwise redraw almost immediately so the border tracks focus.
+#define DEBOUNCE_NORMAL_NS (5 * NSEC_PER_MSEC)
+#define DEBOUNCE_SPACE_NS  (80 * NSEC_PER_MSEC)
+#define SPACE_SETTLE_NS    (500 * NSEC_PER_MSEC)
+
+static uint64_t g_space_change_deadline = 0;
+
+void border_space_change_begin(void) {
+  g_space_change_deadline = dispatch_time(DISPATCH_TIME_NOW, SPACE_SETTLE_NS);
+}
+
 void border_update(struct border* border, bool try_async) {
-  pthread_mutex_lock(&border->mutex);
   struct settings* settings = border_get_settings(border);
-  border_update_internal(border, settings);
-  pthread_mutex_unlock(&border->mutex);
-  return;
+  // __block: captured by reference so the dispatch block can pass a
+  // non-const pointer (plain captures are const inside the block).
+  __block struct settings settings_copy = *settings;
 
-  if (!border->wid || !try_async) {
-    border_update_internal(border, settings);
+  pthread_mutex_lock(&border->mutex);
+  uint64_t gen = ++border->update_generation;
+  pthread_mutex_unlock(&border->mutex);
+
+  uint64_t delay = dispatch_time(DISPATCH_TIME_NOW, 0) < g_space_change_deadline
+      ? DEBOUNCE_SPACE_NS
+      : DEBOUNCE_NORMAL_NS;
+
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delay),
+                 dispatch_get_main_queue(), ^{
+    if (gen != border->update_generation) return;  // superseded by a newer update
+    pthread_mutex_lock(&border->mutex);
+    border_update_internal(border, &settings_copy);
     pthread_mutex_unlock(&border->mutex);
-    return;
-  }
-
-  struct payload {
-    struct border* border;
-    struct settings settings;
-  }* payload = malloc(sizeof(struct payload));
-
-  payload->border = border;
-  payload->settings = *settings;
-
-  pthread_t thread;
-  pthread_create(&thread, NULL, border_update_async_proc, payload);
-  pthread_detach(thread);
-  pthread_mutex_unlock(&border->mutex);
+  });
 }
 
 void border_hide(struct border* border) {

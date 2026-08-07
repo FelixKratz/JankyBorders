@@ -16,13 +16,11 @@ static bool window_in_list(struct table* list, char* app_name) {
   return false;
 }
 
-static bool app_allowed(struct settings* settings, char* app_name) {
-  if (settings->whitelist_enabled
-      && !window_in_list(&settings->whitelist, app_name)) {
+static bool app_allowed(char* app_name) {
+  if (g_whitelist_enabled && !window_in_list(&g_whitelist, app_name)) {
     return false;
   }
-  if (settings->blacklist_enabled
-      && window_in_list(&settings->blacklist, app_name)) {
+  if (g_blacklist_enabled && window_in_list(&g_blacklist, app_name)) {
     return false;
   }
   return true;
@@ -39,7 +37,7 @@ bool windows_window_create(struct table* windows, uint32_t wid, uint64_t sid) {
   static char pid_name_buffer[PROC_PIDPATHINFO_MAXSIZE];
   proc_name(pid, pid_name_buffer, sizeof(pid_name_buffer));
 
-  if (pid == g_pid || !app_allowed(&g_settings, pid_name_buffer)) return false;
+  if (pid == g_pid || !app_allowed(pid_name_buffer)) return false;
 
   CFArrayRef target_ref = cfarray_of_cfnumbers(&wid,
                                                sizeof(uint32_t),
@@ -222,10 +220,11 @@ void windows_update_notifications(struct table* windows) {
   int window_count = 0;
   uint32_t window_list[1024] = {};
 
-  for (int i = 0; i < windows->capacity; ++i) {
+  for (int i = 0; i < windows->capacity && window_count < 1024; ++i) {
     struct bucket *bucket = windows->buckets[i];
     while (bucket) {
       if (bucket->value) {
+        if (window_count >= 1024) break;
         uint32_t wid = *(uint32_t *) bucket->key;
         window_list[window_count++] = wid;
       }

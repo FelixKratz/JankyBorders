@@ -203,14 +203,17 @@ static void yabai_message(CFMachPortRef port, void* data, CFIndex size, void* co
 
     if (message->descriptor.size == sizeof(struct payload)) {
       struct payload* payload = message->descriptor.address;
+      // count is attacker-controlled; the wid arrays are fixed at 512, so clamp
+      // before indexing to avoid reading past the payload.
+      uint32_t count = payload->count > 512 ? 512 : payload->count;
       if (payload->event == 1325) {
-        for (int i = 0; i < payload->count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
           yabai_proxy_begin(context,
                             payload->proxy_wid[i],
                             payload->real_wid[i]  );
         }
       } else if (payload->event == 1326) {
-        for (int i = 0; i < payload->count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
           yabai_proxy_end(context,
                           payload->proxy_wid[i],
                           payload->real_wid[i]  );

@@ -41,9 +41,12 @@ struct settings g_settings = { .enabled = true,
                                .hidpi = false,
                                .show_background = false,
                                .border_order = BORDER_ORDER_BELOW,
-                               .ax_focus = false,
-                               .blacklist_enabled = false,
-                               .whitelist_enabled = false                    };
+                               .ax_focus = false                             };
+
+bool g_blacklist_enabled = false;
+struct table g_blacklist;
+bool g_whitelist_enabled = false;
+struct table g_whitelist;
 
 static TABLE_HASH_FUNC(hash_windows) {
   return *(uint32_t *) key;
@@ -69,10 +72,17 @@ static TABLE_COMPARE_FUNC(cmp_blacklist) {
 
 static void message_handler(void* data, uint32_t len) {
   char* message = data;
+
+  // The IPC payload is attacker-controlled: reject anything that is not a
+  // non-empty, NUL-terminated blob so the strlen-based walks below stay in
+  // bounds instead of running off the end of the received message.
+  if (!message || len == 0 || message[len - 1] != '\0') return;
+  char* end = message + len;
+
   uint32_t update_mask = 0;
   struct settings settings = g_settings;
 
-  while(message && *message) {
+  while(message < end && *message) {
     update_mask |= parse_settings(&settings, 1, &message);
     message += strlen(message) + 1;
   }
@@ -96,7 +106,7 @@ static void message_handler(void* data, uint32_t len) {
           if (border->setting_override.enabled) {
             char* message = data;
             uint32_t window_update_mask = 0;
-            while(message && *message) {
+            while(message < end && *message) {
               window_update_mask |= parse_settings(&border->setting_override,
                                                    1,
                                                    &message                  );
@@ -181,8 +191,8 @@ int main(int argc, char** argv) {
     exit(EXIT_SUCCESS);
   }
 
-  table_init(&g_settings.blacklist, 64, hash_blacklist, cmp_blacklist);
-  table_init(&g_settings.whitelist, 64, hash_blacklist, cmp_blacklist);
+  table_init(&g_blacklist, 64, hash_blacklist, cmp_blacklist);
+  table_init(&g_whitelist, 64, hash_blacklist, cmp_blacklist);
   g_settings.ax_focus = ax_check_trust(true);
 
   uint32_t update_mask = parse_settings(&g_settings, argc - 1, argv + 1);

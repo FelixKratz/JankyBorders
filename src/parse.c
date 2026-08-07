@@ -1,6 +1,7 @@
 #include "parse.h"
 #include "border.h"
 #include "hashtable.h"
+#include <stdlib.h>
 
 static bool str_starts_with(char* string, char* prefix) {
   if (!string || !prefix) return false;
@@ -10,8 +11,12 @@ static bool str_starts_with(char* string, char* prefix) {
 }
 
 static bool parse_list(struct table* list, char* token) {
+  // token comes from an attacker-controlled IPC message, so its length is
+  // unbounded; strsep() mutates the buffer, so heap-copy it rather than sizing
+  // a stack VLA off the message (a long list would blow the stack).
   uint32_t token_len = strlen(token) + 1;
-  char copy[token_len];
+  char* copy = malloc(token_len);
+  if (!copy) return false;
   memcpy(copy, token, token_len);
 
   char* name;
@@ -25,6 +30,7 @@ static bool parse_list(struct table* list, char* token) {
       entry_found = true;
     }
   }
+  free(copy);
   return entry_found;
 }
 
@@ -88,15 +94,13 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {
-      settings->blacklist_enabled = parse_list(&settings->blacklist,
-                                               arguments[i]
-                                               + strlen(blacklist));
+      g_blacklist_enabled = parse_list(&g_blacklist,
+                                       arguments[i] + strlen(blacklist));
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (str_starts_with(arguments[i], whitelist)) {
-      settings->whitelist_enabled = parse_list(&settings->whitelist,
-                                               arguments[i]
-                                               + strlen(whitelist));
+      g_whitelist_enabled = parse_list(&g_whitelist,
+                                       arguments[i] + strlen(whitelist));
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
     }
     else if (sscanf(arguments[i], "width=%f", &settings->border_width) == 1) {

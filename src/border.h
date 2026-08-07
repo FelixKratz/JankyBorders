@@ -44,13 +44,16 @@ struct settings {
   bool show_background;
   int border_order;
   bool ax_focus;
-
-  bool blacklist_enabled;
-  struct table blacklist;
-
-  bool whitelist_enabled;
-  struct table whitelist;
 };
+
+// App filter lists own heap memory, so they must NOT live inside struct settings:
+// that struct is shallow-copied freely (per-window overrides, IPC message
+// handling), and aliasing an owning table across copies caused a use-after-free
+// when parse_list() cleared one copy's buckets. Keep them as global state.
+extern bool g_blacklist_enabled;
+extern struct table g_blacklist;
+extern bool g_whitelist_enabled;
+extern struct table g_whitelist;
 
 struct event_buffer {
   bool disable_coalescing;

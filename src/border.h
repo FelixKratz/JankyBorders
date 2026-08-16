@@ -23,7 +23,8 @@
 struct color_style {
   enum { COLOR_STYLE_GRADIENT, COLOR_STYLE_SOLID, COLOR_STYLE_GLOW } stype;
   union {
-    uint32_t color;
+    // One color per side, a single color is simply repeated into all four
+    uint32_t colors[BORDER_SIDE_COUNT];
     struct gradient gradient;
   };
 };

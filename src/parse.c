@@ -28,12 +28,50 @@ static bool parse_list(struct table* list, char* token) {
   return entry_found;
 }
 
+// Parses a comma separated list of colors, terminated by `terminator`, into one
+// color per side: a single color applies to the whole border, two colors set the
+// top and the bottom, four colors set every side individually. Sides that the
+// list leaves out stay transparent and are not drawn.
+static bool parse_color_list(uint32_t* colors, char* token, char terminator) {
+  uint32_t parsed[BORDER_SIDE_COUNT];
+  uint32_t count = 0;
+  int end = 0;
+
+  while (count < BORDER_SIDE_COUNT) {
+    if (sscanf(token, " 0x%x%n", &parsed[count], &end) != 1) return false;
+    count++;
+    token += end + strspn(token + end, " \t");
+    if (*token != ',') break;
+    token++;
+  }
+
+  // Anything left over is either garbage or a fifth color
+  if (token[strspn(token, " \t")] != terminator) return false;
+
+  if (count == 1) {
+    for (uint32_t i = 0; i < BORDER_SIDE_COUNT; i++) colors[i] = parsed[0];
+  } else if (count == 2) {
+    colors[BORDER_SIDE_TOP] = parsed[0];
+    colors[BORDER_SIDE_BOTTOM] = parsed[1];
+    colors[BORDER_SIDE_RIGHT] = 0;
+    colors[BORDER_SIDE_LEFT] = 0;
+  } else if (count == BORDER_SIDE_COUNT) {
+    for (uint32_t i = 0; i < BORDER_SIDE_COUNT; i++) colors[i] = parsed[i];
+  } else {
+    return false;
+  }
+  return true;
+}
+
 static bool parse_color(struct color_style* style, char* token) {
-  if (sscanf(token, "=0x%x", &style->color) == 1) {
+  static char glow[] = "=glow(";
+
+  if (token[0] == '=' && parse_color_list(style->colors, token + 1, '\0')) {
     style->stype = COLOR_STYLE_SOLID;
     return true;
   }
-  else if (sscanf(token, "=glow(0x%x)", &style->color) == 1) {
+  else if (str_starts_with(token, glow)
+           && parse_color_list(style->colors, token + strlen(glow), ')')) {
     style->stype = COLOR_STYLE_GLOW;
     return true;
   }
@@ -84,7 +122,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       if (parse_color(&settings->background,
                                  arguments[i] + strlen(background_color))) {
         update_mask |= BORDER_UPDATE_MASK_ALL;
-        settings->show_background = settings->background.color & 0xff000000;
+        settings->show_background = settings->background.colors[0] & 0xff000000;
       }
     }
     else if (str_starts_with(arguments[i], blacklist)) {

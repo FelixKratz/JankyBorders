@@ -75,10 +75,21 @@ could be issued.
 	red channel, _G_ the green channel and _B_ the blue channel. All
 	constituents take a base 16 number, i.e. _0-F_.
 
+	Alternatively a comma separated list of colors, which colors the sides of
+	the border individually: ++
+	one color for the whole border ++
+	two colors for the top and the bottom border ++
+	four colors for the top, right, bottom and left border ++
+Sides that the list leaves out are not drawn, and adjacent sides of
+different colors meet at a 45 degree angle in the corners, like the
+mitered joints of a picture frame. For instance
+active_color=0xffff0000,0xff0000ff draws a red top and a blue bottom
+border only.
+
 	The color argument can take the special values: ++
 	_gradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)_ ++
 	_gradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)_ ++
-	_glow(0xAARRGGBB)_ ++
+	_glow(<color>)_ ++
 (You might need to quote these arguments depending on your shell)
 
 *<application_list>*

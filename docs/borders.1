@@ -107,13 +107,28 @@ A color formatted as \fI0xAARRGGBB\fR, where \fIA\fR is the alpha channel, \fIR\
 red channel, \fIG\fR the green channel and \fIB\fR the blue channel.\& All
 constituents take a base 16 number, i.\&e.\& \fI0-F\fR.\&
 .PP
+Alternatively a comma separated list of colors, which colors the sides of
+the border individually: 
+.br
+	one color for the whole border 
+.br
+	two colors for the top and the bottom border 
+.br
+	four colors for the top, right, bottom and left border 
+.br
+Sides that the list leaves out are not drawn, and adjacent sides of
+different colors meet at a 45 degree angle in the corners, like the
+mitered joints of a picture frame.\& For instance
+active_color=0xffff0000,0xff0000ff draws a red top and a blue bottom
+border only.\&
+.PP
 The color argument can take the special values: 
 .br
 	\fIgradient(top_left=0xAARRGGBB,bottom_right=0xAARRGGBB)\fR 
 .br
 	\fIgradient(top_right=0xAARRGGBB,bottom_left=0xAARRGGBB)\fR 
 .br
-	\fIglow(0xAARRGGBB)\fR 
+	\fIglow(<color>)\fR 
 .br
 (You might need to quote these arguments depending on your shell)
 .PP

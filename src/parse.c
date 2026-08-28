@@ -118,6 +118,14 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
       settings->hidpi = false;
     }
+    else if (strcmp(arguments[i], "renderer=layer") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->force_cg = false;
+    }
+    else if (strcmp(arguments[i], "renderer=cg") == 0) {
+      update_mask |= BORDER_UPDATE_MASK_RECREATE_ALL;
+      settings->force_cg = true;
+    }
     else if (strcmp(arguments[i], "ax_focus=on") == 0) {
       settings->ax_focus = true;
       update_mask |= BORDER_UPDATE_MASK_SETTING;

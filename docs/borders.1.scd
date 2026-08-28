@@ -37,6 +37,11 @@ API, thereby being faster than comparable tools.
 *hidpi=<boolean>*
 	If set to _on_, the border will be drawn with retina resolution.
 
+*renderer=<layer|cg>*
+	If set to _layer_ (the default), borders are drawn by CoreAnimation and
+	need no backing store. _cg_ draws them with CoreGraphics instead, which
+	is also the fallback where the former is unavailable.
+
 *ax_focus=<boolean>*
 	If set to _on_, the (slower) accessibility API is used to resolve the
 	focused window. Enabled automatically if the (parent) process has

@@ -225,6 +225,26 @@ static inline void window_send_to_space(int cid, uint32_t wid, uint32_t sid) {
   CFRelease(window_list);
 }
 
+static inline void window_disable_shadow(uint32_t wid) {
+  CFIndex shadow_density = 0;
+  CFNumberRef shadow_density_cf = CFNumberCreate(kCFAllocatorDefault,
+                                                 kCFNumberCFIndexType,
+                                                 &shadow_density      );
+
+  const void *keys[1] = { CFSTR("com.apple.WindowShadowDensity") };
+  const void *values[1] = { shadow_density_cf };
+  CFDictionaryRef shadow_props_cf = CFDictionaryCreate(NULL,
+                                             keys,
+                                             values,
+                                             1,
+                                             &kCFTypeDictionaryKeyCallBacks,
+                                             &kCFTypeDictionaryValueCallBacks);
+
+  SLSWindowSetShadowProperties(wid, shadow_props_cf);
+  CFRelease(shadow_density_cf);
+  CFRelease(shadow_props_cf);
+}
+
 static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unmanaged) {
   uint32_t id;
   CFTypeRef frame_region = NULL;
@@ -266,24 +286,7 @@ static inline uint32_t window_create(int cid, CGRect frame, bool hidpi, bool unm
   SLSSetWindowTags(cid, wid, &set_tags, 64);
   SLSClearWindowTags(cid, wid, &clear_tags, 64);
   SLSSetWindowOpacity(cid, wid, 0);
-
-  CFIndex shadow_density = 0;
-  CFNumberRef shadow_density_cf = CFNumberCreate(kCFAllocatorDefault,
-                                                 kCFNumberCFIndexType,
-                                                 &shadow_density      );
-
-  const void *keys[1] = { CFSTR("com.apple.WindowShadowDensity") };
-  const void *values[1] = { shadow_density_cf };
-  CFDictionaryRef shadow_props_cf = CFDictionaryCreate(NULL,
-                                             keys,
-                                             values,
-                                             1,
-                                             &kCFTypeDictionaryKeyCallBacks,
-                                             &kCFTypeDictionaryValueCallBacks);
-
-  SLSWindowSetShadowProperties(wid, shadow_props_cf);
-  CFRelease(shadow_density_cf);
-  CFRelease(shadow_props_cf);
+  window_disable_shadow(wid);
 
   return wid;
 }

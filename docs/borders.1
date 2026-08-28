@@ -56,6 +56,13 @@ Determines the width of the border.\& For example, width=5.\&0 creates a border
 If set to \fIon\fR, the border will be drawn with retina resolution.\&
 .PP
 .RE
+\fBrenderer=<layer|cg>\fR
+.RS 4
+If set to \fIlayer\fR (the default), borders are drawn by CoreAnimation and
+need no backing store.\& \fIcg\fR draws them with CoreGraphics instead, which
+is also the fallback where the former is unavailable.\&
+.PP
+.RE
 \fBax_focus=<boolean>\fR
 .RS 4
 If set to \fIon\fR, the (slower) accessibility API is used to resolve the

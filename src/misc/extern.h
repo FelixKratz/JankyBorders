@@ -40,6 +40,8 @@ extern int32_t SLSGetWindowSubLevel(int cid, uint32_t wid);
 extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
 
+extern CGError SLSSetWindowLayerContext(int cid, uint32_t wid, void* context);
+
 extern CFTypeRef SLSTransactionCreate(int cid);
 extern CGError SLSTransactionSetWindowLevel(CFTypeRef transaction, uint32_t wid, int level);
 extern CGError SLSTransactionSetWindowSubLevel(CFTypeRef transaction, uint32_t wid, int level);

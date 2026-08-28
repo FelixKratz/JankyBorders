@@ -4,8 +4,72 @@
 #include "border.h"
 #include "misc/window.h"
 
+#include <pthread.h>
+#include <time.h>
+
 extern struct table g_windows;
 extern pid_t g_pid;
+
+// Requests are coalesced into one pending run at the earliest deadline asked
+// for, plus a trailing run at the latest one, so that a storm of events can
+// neither push the run out nor drop the longer delay it asked for.
+struct coalesced_job {
+  bool pending;
+  uint32_t generation;
+  uint64_t deadline;
+  uint64_t latest;
+};
+
+#define COALESCE_SLACK_NS (1 * NSEC_PER_MSEC)
+
+static void schedule_coalesced(struct coalesced_job* job, uint64_t delay_us, dispatch_block_t action) {
+  if (!pthread_main_np()) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      schedule_coalesced(job, delay_us, action);
+    });
+    return;
+  }
+
+  uint64_t delay_ns = delay_us * NSEC_PER_USEC;
+  uint64_t deadline = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) + delay_ns;
+
+  if (job->latest < deadline) job->latest = deadline;
+
+  if (job->pending && job->deadline <= deadline) return;
+
+  job->pending = true;
+  job->deadline = deadline;
+  uint32_t generation = ++job->generation;
+
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)delay_ns),
+                 dispatch_get_main_queue(), ^{
+    if (job->generation != generation) return;
+    job->pending = false;
+    action();
+
+    uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    uint64_t latest = job->latest;
+    job->latest = 0;
+    if (latest > now + COALESCE_SLACK_NS) {
+      schedule_coalesced(job, (latest - now) / NSEC_PER_USEC, action);
+    }
+  });
+}
+
+static struct coalesced_job g_focus_job;
+static struct coalesced_job g_space_job;
+
+static inline void schedule_focus_update(uint64_t delay_us) {
+  schedule_coalesced(&g_focus_job, delay_us, ^{
+    windows_determine_and_focus_active_window(&g_windows);
+  });
+}
+
+static inline void schedule_space_update(uint64_t delay_us) {
+  schedule_coalesced(&g_space_job, delay_us, ^{
+    windows_draw_borders_on_current_spaces(&g_windows);
+  });
+}
 
 #ifdef DEBUG
 static void dump_event(void* data, size_t data_length) {
@@ -69,18 +133,14 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
     windows_window_update(windows, wid);
   } else if (event == EVENT_WINDOW_REORDER) {
     debug("Window Reorder (and focus): %d\n", wid);
-    windows_window_update(windows, wid);
-    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(10000, {
-      windows_determine_and_focus_active_window(windows);
-    });
+    windows_window_refresh(windows, wid);
+    schedule_focus_update(10000);
   } else if (event == EVENT_WINDOW_LEVEL) {
     debug("Window Level: %d\n", wid);
-    windows_window_update(windows, wid);
+    windows_window_refresh(windows, wid);
   } else if (event == EVENT_WINDOW_TITLE || event == EVENT_WINDOW_UPDATE) {
     debug("Window Focus\n");
-    DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
-      windows_determine_and_focus_active_window(windows);
-    });
+    schedule_focus_update(50000);
   } else if (event == EVENT_WINDOW_UNHIDE) {
     debug("Window Unhide: %d\n", wid);
     windows_window_unhide(windows, wid);
@@ -95,16 +155,12 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
 
 static void front_app_handler() {
   debug("Window Focus\n");
-  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
-    windows_determine_and_focus_active_window(&g_windows);
-  });
+  schedule_focus_update(50000);
 }
 
 static void space_handler() {
   // Not all native-fullscreen windows have yet updated their space id...
-  DELAY_ASYNC_EXEC_ON_MAIN_THREAD(20000, {
-    windows_draw_borders_on_current_spaces(&g_windows);
-  });
+  schedule_space_update(20000);
 }
 
 void events_register(int cid) {

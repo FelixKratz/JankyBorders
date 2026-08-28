@@ -42,6 +42,7 @@ struct settings {
   char border_style;
   bool hidpi;
   bool show_background;
+  bool force_cg;
   int border_order;
   bool ax_focus;
 
@@ -51,6 +52,8 @@ struct settings {
   bool whitelist_enabled;
   struct table whitelist;
 };
+
+struct layer_border;
 
 struct event_buffer {
   bool disable_coalescing;
@@ -67,6 +70,17 @@ struct border {
   bool too_small;
   bool sticky;
 
+  bool fresh_surface;
+  bool interior_painted;
+
+  // Level and sub level of the target window, refetched when stale_props is set
+  bool stale_props;
+  int level;
+  int sub_level;
+
+  bool tags_applied;
+  bool applied_sticky;
+
   uint64_t sid;
   uint32_t wid;
   uint32_t target_wid;
@@ -79,6 +93,12 @@ struct border {
   CGRect target_bounds;
   CGRect drawing_bounds;
   CGContextRef context;
+
+  struct nine_slice_cache nine_slice;
+
+  bool use_layer;
+  struct layer_border* layer;
+  bool layer_failed;
 
   struct animation animation;
   struct event_buffer event_buffer;
@@ -95,6 +115,7 @@ void border_destroy(struct border* border);
 
 void border_move(struct border* border);
 void border_update(struct border* border, bool try_async);
+void border_invalidate_props(struct border* border);
 void border_hide(struct border* border);
 void border_unhide(struct border* border);
 

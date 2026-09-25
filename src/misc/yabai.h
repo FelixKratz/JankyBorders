@@ -9,6 +9,8 @@
 #include <CoreVideo/CoreVideo.h>
 #include <pthread.h>
 
+extern bool g_mission_control_active;
+
 // Additional border interfaces needed for the yabai integration
 void border_init(struct border* border, int cid);
 void border_create_window(struct border* border, CGRect frame, bool unmanaged, bool hidpi);
@@ -90,7 +92,9 @@ static void* yabai_proxy_begin_proc(void* context) {
     border_update_internal(proxy, &info->settings);
   }
 
-  CFTypeRef transaction = SLSTransactionCreate(proxy->cid);
+  CFTypeRef transaction = g_mission_control_active
+                          ? NULL
+                          : SLSTransactionCreate(proxy->cid);
   if (transaction) {
     SLSTransactionOrderWindow(transaction,
                               proxy->wid,

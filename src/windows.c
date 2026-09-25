@@ -159,6 +159,16 @@ void windows_update_inactive(struct table* windows) {
   }
 }
 
+void windows_hide_all(struct table* windows) {
+  for (int i = 0; i < windows->capacity; ++i) {
+    struct bucket* bucket = windows->buckets[i];
+    while (bucket) {
+      if (bucket->value) border_hide(bucket->value);
+      bucket = bucket->next;
+    }
+  }
+}
+
 void windows_window_update(struct table* windows, uint32_t wid) {
   struct border* border = table_find(windows, &wid);
   if (border) border_update(border, true);

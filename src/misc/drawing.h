@@ -14,6 +14,30 @@ static inline void colors_from_hex(uint32_t hex, float* a, float* r, float* g, f
   *b = ((hex >> 0) & 0xff) / 255.f;
 }
 
+static inline void colors_mix(uint32_t color1,
+                              uint32_t color2,
+                              float* a,
+                              float* r,
+                              float* g,
+                              float* b) {
+  float a1, r1, g1, b1;
+  float a2, r2, g2, b2;
+  colors_from_hex(color1, &a1, &r1, &g1, &b1);
+  colors_from_hex(color2, &a2, &r2, &g2, &b2);
+
+  float alpha_sum = a1 + a2;
+  *a = alpha_sum / 2.0f;
+  if (alpha_sum > 0.0f) {
+    *r = (r1 * a1 + r2 * a2) / alpha_sum;
+    *g = (g1 * a1 + g2 * a2) / alpha_sum;
+    *b = (b1 * a1 + b2 * a2) / alpha_sum;
+  } else {
+    *r = 0.0f;
+    *g = 0.0f;
+    *b = 0.0f;
+  }
+}
+
 static inline void drawing_set_fill(CGContextRef context, uint32_t color) {
   float a,r,g,b;
   colors_from_hex(color, &a, &r, &g, &b);
@@ -96,7 +120,7 @@ static inline void drawing_draw_filled_path(CGContextRef context, CGPathRef path
   CGContextFillPath(context);
 }
 
-static inline CGGradientRef drawing_create_gradient(struct gradient* gradient, CGAffineTransform trans, CGPoint direction[2]) {
+static inline CGGradientRef drawing_create_gradient(const struct gradient* gradient, CGAffineTransform trans, CGPoint direction[2]) {
   float a1, a2, r1, r2, g1, g2, b1, b2;
   colors_from_hex(gradient->color1, &a1, &r1, &g1, &b1);
   colors_from_hex(gradient->color2, &a2, &r2, &g2, &b2);
@@ -121,4 +145,3 @@ static inline CGGradientRef drawing_create_gradient(struct gradient* gradient, C
   direction[1] = CGPointApplyAffineTransform(direction[1], trans);
   return result;
 }
-

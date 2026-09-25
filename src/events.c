@@ -3,6 +3,7 @@
 #include "windows.h"
 #include "border.h"
 #include "misc/window.h"
+#include "misc/mission_control.h"
 
 extern struct table g_windows;
 extern pid_t g_pid;
@@ -41,6 +42,9 @@ static void window_spawn_handler(uint32_t event, struct window_spawn_data* data,
   uint64_t sid = data->sid;
 
   if (!wid || !sid || is_own_window(cid, wid)) return;
+
+  if (event == EVENT_WINDOW_CREATE) mission_control_window_created(cid, wid);
+  else if (event == EVENT_WINDOW_DESTROY) mission_control_window_destroyed(cid, wid);
 
   if (event == EVENT_WINDOW_CREATE) {
     if (windows_window_create(windows, wid, sid)) {
@@ -93,7 +97,8 @@ static void window_modify_handler(uint32_t event, uint32_t* window_id, size_t _,
   }
 }
 
-static void front_app_handler() {
+static void front_app_handler(uint32_t event, void* data, size_t _, int cid) {
+  mission_control_prune(cid);
   debug("Window Focus\n");
   DELAY_ASYNC_EXEC_ON_MAIN_THREAD(50000, {
     windows_determine_and_focus_active_window(&g_windows);

@@ -1,6 +1,7 @@
 #include "parse.h"
 #include "border.h"
 #include "hashtable.h"
+#include <math.h>
 
 static bool str_starts_with(char* string, char* prefix) {
   if (!string || !prefix) return false;
@@ -66,6 +67,7 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
   static char whitelist[] = "whitelist=";
 
   char order = 'a';
+  float fade_duration = 0.f;
   uint32_t update_mask = 0;
   for (int i = 0; i < count; i++) {
     if (str_starts_with(arguments[i], active_color)) {
@@ -124,6 +126,12 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
     }
     else if (strcmp(arguments[i], "ax_focus=off") == 0) {
       settings->ax_focus = false;
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
+    else if (sscanf(arguments[i], "fade_duration=%f", &fade_duration) == 1
+             && isfinite(fade_duration)
+             && fade_duration >= 0.f                                    ) {
+      settings->fade_duration = fade_duration;
       update_mask |= BORDER_UPDATE_MASK_SETTING;
     }
     else if (sscanf(arguments[i], "apply-to=%d", &settings->apply_to) == 1) {

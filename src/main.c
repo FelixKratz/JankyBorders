@@ -42,6 +42,7 @@ struct settings g_settings = { .enabled = true,
                                .show_background = false,
                                .border_order = BORDER_ORDER_BELOW,
                                .ax_focus = false,
+                               .fade_duration = 0.f,
                                .blacklist_enabled = false,
                                .whitelist_enabled = false                    };
 

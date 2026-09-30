@@ -43,6 +43,12 @@ API, thereby being faster than comparable tools.
 	accessibility permissions. Improves compatibility with other tools
 	modifying window properties on a system level (e.g. yabai).
 
+*fade_duration=<float>*
+	Duration in milliseconds of the color transition when the focus moves
+	between windows: the border of the previously focused window fades to
+	_inactive_color_ while the border of the newly focused window fades to
+	_active_color_. A value of _0_ (default) disables the transition.
+
 *blacklist=<application_list>*
 	The applications specified here are excluded from being bordered. For
 	example, blacklist="Safari,kitty" excludes Safari and kitty from being

@@ -44,6 +44,7 @@ struct settings {
   bool show_background;
   int border_order;
   bool ax_focus;
+  float fade_duration;
 
   bool blacklist_enabled;
   struct table blacklist;
@@ -83,6 +84,11 @@ struct border {
   struct animation animation;
   struct event_buffer event_buffer;
 
+  // Only meaningful while fade_timer is running, otherwise focused decides
+  float focus_level;
+  uint64_t fade_last_tick;
+  dispatch_source_t fade_timer;
+
   bool is_proxy;
   struct border* proxy;
   volatile uint32_t external_proxy_wid;
@@ -95,6 +101,7 @@ void border_destroy(struct border* border);
 
 void border_move(struct border* border);
 void border_update(struct border* border, bool try_async);
+void border_set_focused(struct border* border, bool focused);
 void border_hide(struct border* border);
 void border_unhide(struct border* border);
 

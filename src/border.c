@@ -2,8 +2,11 @@
 #include "hashtable.h"
 #include "misc/extern.h"
 #include "windows.h"
+#include <math.h>
 #include <pthread.h>
 #include <time.h>
+
+#define BORDER_FADE_INTERVAL (NSEC_PER_SEC / 120)
 
 extern struct settings g_settings;
 
@@ -55,18 +58,94 @@ static bool border_calculate_bounds(struct border* border, CGRect* frame, struct
   return true;
 }
 
+static uint32_t color_mix(uint32_t from, uint32_t to, float t) {
+  float fa, fr, fg, fb, ta, tr, tg, tb;
+  colors_from_hex(from, &fa, &fr, &fg, &fb);
+  colors_from_hex(to, &ta, &tr, &tg, &tb);
+
+  // Mix premultiplied colors, such that fading from or to a transparent
+  // color does not pass through its (invisible) rgb components
+  float a = fa + (ta - fa) * t;
+  if (a <= 0.f) return 0;
+  float r = (fr * fa + (tr * ta - fr * fa) * t) / a;
+  float g = (fg * fa + (tg * ta - fg * fa) * t) / a;
+  float b = (fb * fa + (tb * ta - fb * fa) * t) / a;
+
+  return ((uint32_t)lroundf(a * 255.f) << 24)
+         | ((uint32_t)lroundf(r * 255.f) << 16)
+         | ((uint32_t)lroundf(g * 255.f) << 8)
+         | (uint32_t)lroundf(b * 255.f);
+}
+
+static struct gradient color_style_as_gradient(struct color_style* style) {
+  if (style->stype == COLOR_STYLE_GRADIENT) return style->gradient;
+  return (struct gradient){ .direction = TL_TO_BR,
+                            .color1 = style->color,
+                            .color2 = style->color };
+}
+
+static struct color_style color_style_mix(struct color_style* from, struct color_style* to, float t, float* glow, uint32_t* glow_color) {
+  *glow = (from->stype == COLOR_STYLE_GLOW ? 1.f - t : 0.f)
+          + (to->stype == COLOR_STYLE_GLOW ? t : 0.f);
+  *glow_color = from->stype == COLOR_STYLE_GLOW ? from->color : to->color;
+
+  if (t <= 0.f) return *from;
+  if (t >= 1.f) return *to;
+
+  struct color_style mix;
+  if (from->stype == COLOR_STYLE_GRADIENT
+      || to->stype == COLOR_STYLE_GRADIENT) {
+    struct gradient from_gradient = color_style_as_gradient(from);
+    struct gradient to_gradient = color_style_as_gradient(to);
+    mix.stype = COLOR_STYLE_GRADIENT;
+    mix.gradient.direction = to->stype == COLOR_STYLE_GRADIENT
+                             ? to_gradient.direction
+                             : from_gradient.direction;
+    mix.gradient.color1 = color_mix(from_gradient.color1,
+                                    to_gradient.color1,
+                                    t                    );
+    mix.gradient.color2 = color_mix(from_gradient.color2,
+                                    to_gradient.color2,
+                                    t                    );
+  } else {
+    mix.stype = *glow > 0.f ? COLOR_STYLE_GLOW : COLOR_STYLE_SOLID;
+    mix.color = color_mix(from->color, to->color, t);
+  }
+  return mix;
+}
+
 static void border_draw(struct border* border, CGRect frame, struct settings* settings) {
   CGContextSaveGState(border->context);
   border->needs_redraw = false;
-  struct color_style color_style = border->focused
-                                   ? settings->active_window
-                                   : settings->inactive_window;
+
+  float level = border->focused ? 1.f : 0.f;
+  if (border->fade_timer) {
+    // smoothstep easing
+    level = border->focus_level * border->focus_level
+            * (3.f - 2.f * border->focus_level);
+  }
+
+  float glow;
+  uint32_t glow_color;
+  struct color_style color_style = color_style_mix(&settings->inactive_window,
+                                                   &settings->active_window,
+                                                   level,
+                                                   &glow,
+                                                   &glow_color               );
+
+  // A gradient draws no shadow, so while fading between a glow and a
+  // gradient the fading glow is drawn below the gradient
+  bool gradient_glow = color_style.stype == COLOR_STYLE_GRADIENT
+                       && glow > 0.f;
+  if (gradient_glow) {
+    uint32_t alpha = lroundf(((glow_color >> 24) & 0xff) * glow);
+    glow_color = (glow_color & 0x00ffffff) | (alpha << 24);
+  }
 
   CGGradientRef gradient = NULL;
   CGPoint gradient_dir[2];
   if (color_style.stype == COLOR_STYLE_SOLID
      || color_style.stype == COLOR_STYLE_GLOW) {
-    bool glow = color_style.stype == COLOR_STYLE_GLOW;
     drawing_set_stroke_and_fill(border->context, color_style.color, glow);
   } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
     CGAffineTransform trans = CGAffineTransformMakeScale(frame.size.width,
@@ -108,6 +187,14 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                                      -settings->border_width / 2.f);
     }
     else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+      if (gradient_glow) {
+        CGContextSaveGState(border->context);
+        drawing_set_stroke_and_fill(border->context, glow_color, glow);
+        drawing_draw_square_with_inset(border->context,
+                                       path_rect,
+                                       -settings->border_width / 2.f);
+        CGContextRestoreGState(border->context);
+      }
       drawing_draw_square_gradient_with_inset(border->context,
                                               gradient,
                                               gradient_dir,
@@ -131,6 +218,15 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
                                            corner_radius,
                                            false           );
     } else if (color_style.stype == COLOR_STYLE_GRADIENT) {
+      if (gradient_glow) {
+        CGContextSaveGState(border->context);
+        drawing_set_stroke_and_fill(border->context, glow_color, glow);
+        drawing_draw_rounded_rect_with_inset(border->context,
+                                             path_rect,
+                                             corner_radius,
+                                             false           );
+        CGContextRestoreGState(border->context);
+      }
       drawing_draw_rounded_gradient_with_inset(border->context,
                                                gradient,
                                                gradient_dir,
@@ -289,10 +385,71 @@ struct border* border_create() {
   return border;
 }
 
+static void border_fade_stop(struct border* border) {
+  if (!border->fade_timer) return;
+  dispatch_source_cancel(border->fade_timer);
+  dispatch_release(border->fade_timer);
+  border->fade_timer = NULL;
+}
+
+static void border_fade_step(struct border* border) {
+  pthread_mutex_lock(&border->mutex);
+  struct settings* settings = border_get_settings(border);
+
+  uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+  float step = settings->fade_duration > 0.f
+               ? (now - border->fade_last_tick) / 1e6f
+                 / settings->fade_duration
+               : 1.f;
+  border->fade_last_tick = now;
+
+  float target = border->focused ? 1.f : 0.f;
+  border->focus_level = border->focus_level < target
+                        ? fminf(border->focus_level + step, target)
+                        : fmaxf(border->focus_level - step, target);
+
+  // The final frame is drawn from the focus state alone
+  if (border->focus_level == target) border_fade_stop(border);
+
+  if (border->wid && !border->too_small && !border->external_proxy_wid) {
+    border_draw(border, border->frame, settings);
+  }
+  pthread_mutex_unlock(&border->mutex);
+}
+
+void border_set_focused(struct border* border, bool focused) {
+  struct settings* settings = border_get_settings(border);
+
+  pthread_mutex_lock(&border->mutex);
+  if (settings->fade_duration > 0.f && !border->fade_timer) {
+    border->focus_level = border->focused ? 1.f : 0.f;
+    border->fade_last_tick = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    border->fade_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,
+                                                0,
+                                                0,
+                                                dispatch_get_main_queue());
+    dispatch_source_set_timer(border->fade_timer,
+                              dispatch_time(DISPATCH_TIME_NOW,
+                                            BORDER_FADE_INTERVAL),
+                              BORDER_FADE_INTERVAL,
+                              NSEC_PER_MSEC                     );
+    dispatch_source_set_event_handler(border->fade_timer, ^{
+      border_fade_step(border);
+    });
+    dispatch_resume(border->fade_timer);
+  }
+  border->focused = focused;
+  border->needs_redraw = true;
+  pthread_mutex_unlock(&border->mutex);
+
+  border_update(border, true);
+}
+
 void border_destroy(struct border* border) {
   border_hide(border);
   dispatch_async(dispatch_get_main_queue(), ^{
     pthread_mutex_lock(&border->mutex);
+    border_fade_stop(border);
     border_destroy_window(border);
     if (border->proxy) border_destroy(border->proxy);
     animation_stop(&border->animation);

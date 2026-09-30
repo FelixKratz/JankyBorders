@@ -26,14 +26,14 @@ static inline void drawing_set_stroke(CGContextRef context, uint32_t color) {
   CGContextSetRGBStrokeColor(context, r, g, b, a);
 }
 
-static inline void drawing_set_stroke_and_fill(CGContextRef context, uint32_t color, bool glow) {
+static inline void drawing_set_stroke_and_fill(CGContextRef context, uint32_t color, float glow) {
   float a,r,g,b;
   colors_from_hex(color, &a, &r, &g, &b);
   CGContextSetRGBFillColor(context, r, g, b, a);
   CGContextSetRGBStrokeColor(context, r, g, b, a);
 
-  if (glow) {
-    CGColorRef color_ref = CGColorCreateGenericRGB(r, g, b, 1.0);
+  if (glow > 0.f) {
+    CGColorRef color_ref = CGColorCreateGenericRGB(r, g, b, glow);
     CGContextSetShadowWithColor(context, CGSizeZero, 10.0, color_ref);
     CGColorRelease(color_ref);
   }

@@ -195,6 +195,10 @@ void border_update_internal(struct border* border, struct settings* settings) {
   int level = window_level(cid, border->target_wid);
   int sub_level = window_sub_level(cid, border->target_wid);
 
+  bool pin_above = settings->border_order == BORDER_ORDER_ABOVE
+                   && border->focused
+                   && !border->is_proxy;
+
   if (!border->wid) {
     border_create_window(border,
                          frame,
@@ -235,7 +239,9 @@ void border_update_internal(struct border* border, struct settings* settings) {
                                      transform   );
   }
   SLSTransactionSetWindowLevel(transaction, border->wid, level);
-  SLSTransactionSetWindowSubLevel(transaction, border->wid, sub_level);
+  SLSTransactionSetWindowSubLevel(transaction,
+                                  border->wid,
+                                  pin_above ? sub_level + 1 : sub_level);
   SLSTransactionOrderWindow(transaction,
                             border->wid,
                             settings->border_order,
